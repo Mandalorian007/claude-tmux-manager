@@ -92,19 +92,12 @@ class WindowManagerImpl extends SessionManager {
   }
 
   /**
-   * Send command to a window - override the parent method signature
-   */
-  async sendCommand(projectName: string, featureName: string, command: string): Promise<void> {
-    // Use the inherited sendCommand method from SessionManager
-    await super.sendCommand(projectName, featureName, command)
-  }
-
-  /**
-   * Send command to a window with detailed result
+   * Send command to a window with result wrapper
    */
   async sendCommandWithResult(projectName: string, featureName: string, command: string): Promise<WindowOperationResult<void>> {
     try {
-      await this.sendCommand(projectName, featureName, command)
+      // Use the inherited sendCommand method from SessionManager
+      await super.sendCommand(projectName, featureName, command)
       return { success: true, warnings: [] }
     } catch (error) {
       return {
