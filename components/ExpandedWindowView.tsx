@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ExternalLink, Trash2, GitCommit, Terminal, Zap, GitBranch, Edit3, Activity, Clock, Code } from 'lucide-react'
+import { Trash2, GitCommit, Terminal, Zap, GitBranch, Activity, Clock, Code } from 'lucide-react'
 import type { ExpandedWindowViewProps } from '@/types'
 
 export function ExpandedWindowView({ window, onDelete }: ExpandedWindowViewProps) {
@@ -275,20 +275,8 @@ export function ExpandedWindowView({ window, onDelete }: ExpandedWindowViewProps
               <GitCommit className="w-4 h-4" />
               <span>View PR</span>
             </button>
-            <button 
-              className="flex items-center gap-2 px-4 py-3 bg-transparent border border-border text-muted hover:text-foreground hover:border-accent/50 rounded-lg text-sm transition-all duration-200"
-              title="Edit Session"
-            >
-              <Edit3 className="w-4 h-4" />
-              <span>Edit</span>
-            </button>
-            <button 
-              className="flex items-center gap-2 px-4 py-3 bg-transparent border border-border text-muted hover:text-foreground hover:border-accent/50 rounded-lg text-sm transition-all duration-200"
-              title="Open Terminal"
-            >
-              <ExternalLink className="w-4 h-4" />
-              <span>Terminal</span>
-            </button>
+
+
             {onDelete && (
               <button 
                 onClick={() => onDelete(window.projectName, window.featureName)}

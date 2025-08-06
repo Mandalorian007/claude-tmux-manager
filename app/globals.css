@@ -157,15 +157,6 @@ body {
   }
   
   /* Interactive effects */
-  .terminal-button {
-    @apply transition-all duration-200;
-    @apply hover:scale-105 active:scale-95;
-    /* Shadow effect handled by custom styles below */
-  }
-  
-  .terminal-button:hover {
-    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1), 0 0 20px var(--accent);
-  }
   
   .terminal-card {
     @apply transition-all duration-300;
