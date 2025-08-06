@@ -5,15 +5,13 @@ import { logger } from '@/lib/logger'
 import type { 
   CreateWindowRequest, 
   WindowResponse, 
-  CreateWindowResponse,
+  CreateWindowResponse
+} from '@/types'
+import type {
   WindowFilter,
   WindowSearchOptions,
-  WindowOperationResult,
-  // Backward compatibility
-  CreateSessionRequest,
-  SessionResponse,
-  CreateSessionResponse
-} from '@/types'
+  WindowOperationResult
+} from '@/types/index'
 
 const requestLogger = logger.createChild({ component: 'WindowsAPI' })
 
@@ -36,8 +34,8 @@ function validatePaginationParams(searchParams: URLSearchParams) {
   return { limit: parsedLimit, offset: parsedOffset }
 }
 
-function parseFilterParams(searchParams: URLSearchParams): SessionFilter {
-  const filter: SessionFilter = {}
+function parseFilterParams(searchParams: URLSearchParams): WindowFilter {
+  const filter: WindowFilter = {}
   
   if (searchParams.get('projectName')) {
     filter.projectName = searchParams.get('projectName')!
@@ -75,18 +73,18 @@ function parseFilterParams(searchParams: URLSearchParams): SessionFilter {
 
 function getErrorStatusCode(error: Error): number {
   if (error instanceof ValidationError) return 400
-  if (error instanceof SessionError) return 409
+  if (error instanceof WindowError) return 409
   if (error instanceof TmuxError || error instanceof GitError) return 503
   return 500
 }
 
-// GET /api/sessions - List all sessions with advanced filtering and search
+// GET /api/windows - List all windows with advanced filtering and search
 export async function GET(request: NextRequest) {
   const startTime = Date.now()
   const { searchParams } = new URL(request.url)
   const requestId = crypto.randomUUID()
   
-  requestLogger.info('GET /api/sessions', { 
+  requestLogger.info('GET /api/windows', { 
     requestId,
     params: Object.fromEntries(searchParams),
     userAgent: request.headers.get('user-agent')
@@ -100,32 +98,32 @@ export async function GET(request: NextRequest) {
     const sortBy = searchParams.get('sortBy') as 'name' | 'activity' | 'score' | undefined
     const searchText = searchParams.get('search')
     
-    let sessions
+    let windows
     let total = 0
     
     // Handle search vs filter
     if (searchText) {
-      const searchOptions: SessionSearchOptions = {
+      const searchOptions: WindowSearchOptions = {
         text: searchText,
         sortBy: sortBy || 'score',
         limit: limit + offset // Get more to handle offset
       }
       
-      const searchResults = await sessionManager.searchSessions(searchOptions)
+      const searchResults = await windowManager.searchWindows(searchOptions)
       const paginatedResults = searchResults.slice(offset, offset + limit)
       
-      sessions = paginatedResults.map(result => result.session)
+      windows = paginatedResults.map(result => result.window)
       total = searchResults.length
     } else {
       // Regular list with filtering
-      const allSessions = await sessionManager.listSessions({ 
+      const allWindows = await windowManager.listWindows({ 
         useCache: true, 
         includeMetadata, 
         filter 
       })
       
-      total = allSessions.length
-      sessions = allSessions.slice(offset, offset + limit)
+      total = allWindows.length
+      windows = allWindows.slice(offset, offset + limit)
     }
     
     const duration = Date.now() - startTime
@@ -137,16 +135,16 @@ export async function GET(request: NextRequest) {
     headers.set('X-Response-Time', `${duration}ms`)
     headers.set('X-Request-Id', requestId)
     
-    const response: SessionResponse & {
+    const response: WindowResponse & {
       pagination: { limit: number; offset: number; total: number; hasMore: boolean }
       meta: { duration: number; cached: boolean }
     } = {
-      sessions,
+      windows,
       pagination: {
         limit,
         offset,
         total,
-        hasMore: offset + sessions.length < total
+        hasMore: offset + windows.length < total
       },
       meta: {
         duration,
@@ -154,9 +152,9 @@ export async function GET(request: NextRequest) {
       }
     }
     
-    requestLogger.info('GET /api/sessions completed', {
+    requestLogger.info('GET /api/windows completed', {
       requestId,
-      sessionCount: sessions.length,
+      windowCount: windows.length,
       total,
       duration
     })
@@ -166,7 +164,7 @@ export async function GET(request: NextRequest) {
     const duration = Date.now() - startTime
     const statusCode = getErrorStatusCode(error as Error)
     
-    requestLogger.error('GET /api/sessions failed', error, {
+    requestLogger.error('GET /api/windows failed', error, {
       requestId,
       duration,
       statusCode
@@ -178,7 +176,7 @@ export async function GET(request: NextRequest) {
     
     return NextResponse.json(
       { 
-        error: (error as Error).message || 'Failed to list sessions',
+        error: (error as Error).message || 'Failed to list windows',
         code: (error as Error).name || 'UnknownError',
         requestId
       },
@@ -187,12 +185,12 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/sessions - Create new session with enhanced validation
+// POST /api/windows - Create new window with enhanced validation
 export async function POST(request: NextRequest) {
   const startTime = Date.now()
   const requestId = crypto.randomUUID()
   
-  requestLogger.info('POST /api/sessions', { requestId })
+  requestLogger.info('POST /api/windows', { requestId })
   
   try {
     // Validate content type
@@ -202,7 +200,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Parse and validate request body
-    let body: CreateSessionRequest
+    let body: CreateWindowRequest
     try {
       body = await request.json()
     } catch (error) {
@@ -229,16 +227,16 @@ export async function POST(request: NextRequest) {
     // Check for enhanced creation mode
     const useEnhanced = request.nextUrl.searchParams.get('enhanced') === 'true'
     
-    let result: SessionOperationResult<any>
+    let result: WindowOperationResult<any>
     
     if (useEnhanced) {
-      result = await sessionManager.createSessionEnhanced(body)
+      result = await windowManager.createWindowEnhanced(body)
     } else {
       try {
-        const session = await sessionManager.createSession(body)
+        const window = await windowManager.createWindow(body)
         result = {
           success: true,
-          data: session,
+          data: window,
           warnings: []
         }
       } catch (error) {
@@ -259,13 +257,13 @@ export async function POST(request: NextRequest) {
     headers.set('X-Request-Id', requestId)
     
     if (result.success && result.data) {
-      headers.set('Location', `/api/sessions/${encodeURIComponent(result.data.projectName)}/${encodeURIComponent(result.data.featureName)}`)
+      headers.set('Location', `/api/windows/${encodeURIComponent(result.data.projectName)}/${encodeURIComponent(result.data.featureName)}`)
     }
     
-    const response: CreateSessionResponse & {
+    const response: CreateWindowResponse & {
       meta: { duration: number; warnings?: string[]; requestId: string }
     } = {
-      session: result.data || null,
+      window: result.data || null,
       success: result.success,
       error: result.error,
       meta: {
@@ -275,7 +273,7 @@ export async function POST(request: NextRequest) {
       }
     }
     
-    requestLogger.info('POST /api/sessions completed', {
+    requestLogger.info('POST /api/windows completed', {
       requestId,
       success: result.success,
       projectName: result.data?.projectName,
@@ -288,7 +286,7 @@ export async function POST(request: NextRequest) {
     const duration = Date.now() - startTime
     const statusCode = getErrorStatusCode(error as Error)
     
-    requestLogger.error('POST /api/sessions failed', error, {
+    requestLogger.error('POST /api/windows failed', error, {
       requestId,
       duration,
       statusCode
@@ -298,12 +296,12 @@ export async function POST(request: NextRequest) {
     headers.set('X-Response-Time', `${duration}ms`)
     headers.set('X-Request-Id', requestId)
     
-    const response: CreateSessionResponse & {
+    const response: CreateWindowResponse & {
       meta: { duration: number; requestId: string }
     } = {
-      session: null as any,
+      window: null as any,
       success: false,
-      error: (error as Error).message || 'Failed to create session',
+      error: (error as Error).message || 'Failed to create window',
       meta: {
         duration,
         requestId

@@ -36,3 +36,10 @@ export class CommandTimeoutError extends Error {
     this.name = 'CommandTimeoutError'
   }
 }
+
+export class WindowError extends Error {
+  constructor(message: string, public windowName?: string, public projectName?: string) {
+    super(message)
+    this.name = 'WindowError'
+  }
+}

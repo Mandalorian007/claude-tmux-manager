@@ -1,4 +1,4 @@
-import { ExternalLink, Trash2, Activity, GitCommit, Terminal, Zap } from 'lucide-react'
+import { ExternalLink, Trash2, Activity, GitCommit, Terminal, Zap, GitBranch, Edit3 } from 'lucide-react'
 import type { WorkspaceWindow } from '@/types'
 import { useState } from 'react'
 

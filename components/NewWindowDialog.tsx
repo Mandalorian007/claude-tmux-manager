@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { X, FolderOpen, Plus, Zap, Terminal, GitBranch } from 'lucide-react'
 import { LoadingSpinner } from './LoadingSpinner'
-import type { CreateSessionRequest } from '@/types'
+import type { CreateWindowRequest } from '@/types'
 
 interface NewWindowDialogProps {
   isOpen: boolean
