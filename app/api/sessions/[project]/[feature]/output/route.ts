@@ -7,10 +7,10 @@ import type { SessionStreamOptions } from '@/types'
 const requestLogger = logger.createChild({ component: 'SessionOutputAPI' })
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     project: string
     feature: string
-  }
+  }>
 }
 
 function validateParams(project: string, feature: string) {
@@ -113,7 +113,8 @@ export async function GET(
   const requestId = crypto.randomUUID()
   
   try {
-    const { projectName, featureName } = validateParams(params.project, params.feature)
+    const resolvedParams = await params
+    const { projectName, featureName } = validateParams(resolvedParams.project, resolvedParams.feature)
     const options = parseOutputOptions(request.nextUrl.searchParams)
     
     requestLogger.info('GET /api/sessions/[project]/[feature]/output', {
@@ -188,11 +189,12 @@ export async function GET(
   } catch (error) {
     const duration = Date.now() - startTime
     const statusCode = getErrorStatusCode(error as Error)
+    const resolvedParams = await params
     
     requestLogger.error('GET /api/sessions/[project]/[feature]/output failed', error, {
       requestId,
-      project: params.project,
-      feature: params.feature,
+      project: resolvedParams.project,
+      feature: resolvedParams.feature,
       duration
     })
     
@@ -220,7 +222,8 @@ export async function POST(
   const requestId = crypto.randomUUID()
   
   try {
-    const { projectName, featureName } = validateParams(params.project, params.feature)
+    const resolvedParams = await params
+    const { projectName, featureName } = validateParams(resolvedParams.project, resolvedParams.feature)
     
     requestLogger.info('POST /api/sessions/[project]/[feature]/output (stream)', {
       requestId,
@@ -283,11 +286,12 @@ export async function POST(
   } catch (error) {
     const duration = Date.now() - startTime
     const statusCode = getErrorStatusCode(error as Error)
+    const resolvedParams = await params
     
     requestLogger.error('POST /api/sessions/[project]/[feature]/output failed', error, {
       requestId,
-      project: params.project,
-      feature: params.feature,
+      project: resolvedParams.project,
+      feature: resolvedParams.feature,
       duration
     })
     

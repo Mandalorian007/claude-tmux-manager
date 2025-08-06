@@ -32,8 +32,8 @@ export function ActionButton({
   const baseClasses = 'inline-flex items-center justify-center gap-2 font-medium font-mono rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background disabled:cursor-not-allowed transform-gpu hover:scale-105 active:scale-95 group'
   
   const variantClasses = {
-    primary: 'bg-accent text-background hover:bg-accent/90 hover:shadow-lg hover:shadow-accent/20 focus:ring-accent disabled:opacity-50 relative overflow-hidden before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/20 before:to-transparent before:translate-x-[-100%] hover:before:translate-x-[100%] before:transition-transform before:duration-500',
-    secondary: 'bg-transparent border border-border text-muted hover:text-foreground hover:border-accent/50 hover:shadow-md hover:shadow-accent/10 focus:ring-accent disabled:opacity-50',
+    primary: 'bg-accent text-background hover:bg-accent/90 focus:ring-accent disabled:opacity-50 relative overflow-hidden before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/20 before:to-transparent before:translate-x-[-100%] hover:before:translate-x-[100%] before:transition-transform before:duration-500',
+    secondary: 'bg-transparent border border-border text-muted hover:text-foreground hover:border-accent/50 focus:ring-accent disabled:opacity-50',
     danger: 'bg-transparent border border-border text-muted hover:text-error hover:border-error/50 hover:bg-error/5 focus:ring-error disabled:opacity-50',
     ghost: 'bg-transparent text-muted hover:text-foreground hover:bg-secondary/50 focus:ring-secondary disabled:opacity-50'
   }

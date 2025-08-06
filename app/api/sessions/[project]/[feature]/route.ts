@@ -8,10 +8,10 @@ import type { SessionHealthCheck, SessionMetadata } from '@/lib/managers/Session
 const requestLogger = logger.createChild({ component: 'SessionAPI' })
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     project: string
     feature: string
-  }
+  }>
 }
 
 function validateParams(project: string, feature: string) {
@@ -51,7 +51,8 @@ export async function GET(
   const requestId = crypto.randomUUID()
   
   try {
-    const { projectName, featureName } = validateParams(params.project, params.feature)
+    const resolvedParams = await params
+    const { projectName, featureName } = validateParams(resolvedParams.project, resolvedParams.feature)
     
     requestLogger.info('GET /api/sessions/[project]/[feature]', {
       requestId,
@@ -113,11 +114,12 @@ export async function GET(
   } catch (error) {
     const duration = Date.now() - startTime
     const statusCode = getErrorStatusCode(error as Error)
+    const resolvedParams = await params
     
     requestLogger.error('GET /api/sessions/[project]/[feature] failed', error, {
       requestId,
-      project: params.project,
-      feature: params.feature,
+      project: resolvedParams.project,
+      feature: resolvedParams.feature,
       duration
     })
     
@@ -145,7 +147,8 @@ export async function DELETE(
   const requestId = crypto.randomUUID()
   
   try {
-    const { projectName, featureName } = validateParams(params.project, params.feature)
+    const resolvedParams = await params
+    const { projectName, featureName } = validateParams(resolvedParams.project, resolvedParams.feature)
     
     requestLogger.info('DELETE /api/sessions/[project]/[feature]', {
       requestId,
@@ -238,11 +241,12 @@ export async function DELETE(
   } catch (error) {
     const duration = Date.now() - startTime
     const statusCode = getErrorStatusCode(error as Error)
+    const resolvedParams = await params
     
     requestLogger.error('DELETE /api/sessions/[project]/[feature] failed', error, {
       requestId,
-      project: params.project,
-      feature: params.feature,
+      project: resolvedParams.project,
+      feature: resolvedParams.feature,
       duration
     })
     
@@ -271,7 +275,8 @@ export async function PATCH(
   const requestId = crypto.randomUUID()
   
   try {
-    const { projectName, featureName } = validateParams(params.project, params.feature)
+    const resolvedParams = await params
+    const { projectName, featureName } = validateParams(resolvedParams.project, resolvedParams.feature)
     
     requestLogger.info('PATCH /api/sessions/[project]/[feature]', {
       requestId,

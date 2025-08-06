@@ -60,8 +60,7 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(
             bg-card-bg border border-border rounded-lg 
             placeholder:text-muted placeholder:transition-all placeholder:duration-300
             focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent
-            focus:bg-background/50 focus:shadow-lg focus:shadow-accent/10
-            transition-all duration-200
+            focus:bg-background/50             transition-all duration-200
             ${isFocused ? 'scale-[1.02]' : ''}
           `}
         />
@@ -85,7 +84,7 @@ export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(
         
         {/* Search suggestions tooltip */}
         {isFocused && !value && (
-          <div className="absolute top-full left-0 right-0 mt-2 bg-card-bg border border-border/50 rounded-lg p-3 z-10 shadow-xl animate-fade-in">
+          <div className="absolute top-full left-0 right-0 mt-2 bg-card-bg border border-border/50 rounded-lg p-3 z-10  animate-fade-in">
             <div className="flex items-center gap-2 mb-2">
               <Terminal className="w-3 h-3 text-accent" />
               <span className="text-xs font-medium text-foreground">Search Tips</span>

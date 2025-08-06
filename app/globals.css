@@ -1,19 +1,77 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+  --color-background: #0f0f23;
+  --color-foreground: #e2e8f0;
+  --color-secondary: #1e293b;
+  --color-accent: #22d3ee;
+  --color-muted: #64748b;
+  --color-border: #334155;
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-error: #ef4444;
+  --color-card-bg: #1a1b3a;
+  --color-sidebar-bg: #141432;
+  
+  --font-family-mono: Monaco, Menlo, "Ubuntu Mono", monospace;
+  
+  --animate-fade-in: fadeIn 0.2s ease-in-out;
+  --animate-slide-up: slideUp 0.3s ease-out;
+  --animate-pulse-slow: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-bounce-subtle: bounceSubtle 3s ease-in-out infinite;
+  --animate-terminal-glow: terminalGlow 2s ease-in-out infinite alternate;
+  --animate-scan-slow: scanSlow 3s linear infinite;
+  --animate-scan-line: scanLine 2s linear infinite;
+  --animate-blink: blink 1s step-start infinite;
+}
+
+@keyframes fadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes slideUp {
+  0% { transform: translateY(10px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes bounceSubtle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+
+@keyframes terminalGlow {
+  0% { box-shadow: 0 0 5px var(--color-accent); opacity: 0.8; }
+  100% { box-shadow: 0 0 20px var(--color-accent), 0 0 30px var(--color-accent); opacity: 1; }
+}
+
+@keyframes scanSlow {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100vw); }
+}
+
+@keyframes scanLine {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
 
 :root {
-  --background: #0f0f23;
-  --foreground: #e2e8f0;
-  --secondary: #1e293b;
-  --accent: #22d3ee;
-  --muted: #64748b;
-  --border: #334155;
-  --success: #10b981;
-  --warning: #f59e0b;
-  --error: #ef4444;
-  --card-bg: #1a1b3a;
-  --sidebar-bg: #141432;
+  --background: var(--color-background);
+  --foreground: var(--color-foreground);
+  --secondary: var(--color-secondary);
+  --accent: var(--color-accent);
+  --muted: var(--color-muted);
+  --border: var(--color-border);
+  --success: var(--color-success);
+  --warning: var(--color-warning);
+  --error: var(--color-error);
+  --card-bg: var(--color-card-bg);
+  --sidebar-bg: var(--color-sidebar-bg);
 }
 
 * {
@@ -66,148 +124,43 @@ body {
   }
 }
 
+/* Additional animations not migrated to @theme */
+@keyframes typing {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+@keyframes matrix-rain {
+  0% { transform: translateY(-100vh); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateY(100vh); opacity: 0; }
+}
+
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(100%); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
 @layer components {
-  /* Terminal-themed animations */
-  @keyframes scan-line {
-    0% {
-      transform: translateY(0) scaleY(1);
-      opacity: 0;
-    }
-    50% {
-      transform: translateY(200px) scaleY(3);
-      opacity: 1;
-    }
-    100% {
-      transform: translateY(400px) scaleY(1);
-      opacity: 0;
-    }
-  }
-  
-  @keyframes scan-slow {
-    0% {
-      transform: translateY(-100%);
-    }
-    100% {
-      transform: translateY(100vh);
-    }
-  }
-  
-  @keyframes fade-in {
-    from {
-      opacity: 0;
-      transform: translateY(20px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-  
-  @keyframes slide-in-right {
-    from {
-      opacity: 0;
-      transform: translateX(100%);
-    }
-    to {
-      opacity: 1;
-      transform: translateX(0);
-    }
-  }
-  
-  @keyframes terminal-glow {
-    0%, 100% {
-      text-shadow: 0 0 5px var(--accent), 0 0 10px var(--accent), 0 0 15px var(--accent);
-    }
-    50% {
-      text-shadow: 0 0 10px var(--accent), 0 0 20px var(--accent), 0 0 30px var(--accent);
-    }
-  }
-  
-  @keyframes typing {
-    from {
-      width: 0;
-    }
-    to {
-      width: 100%;
-    }
-  }
-  
-  @keyframes blink {
-    0%, 50% {
-      opacity: 1;
-    }
-    51%, 100% {
-      opacity: 0;
-    }
-  }
-  
-  @keyframes matrix-rain {
-    0% {
-      transform: translateY(-100vh);
-      opacity: 0;
-    }
-    10% {
-      opacity: 1;
-    }
-    90% {
-      opacity: 1;
-    }
-    100% {
-      transform: translateY(100vh);
-      opacity: 0;
-    }
-  }
-  
-  @keyframes bounce-subtle {
-    0%, 100% {
-      transform: translateY(0);
-    }
-    50% {
-      transform: translateY(-4px);
-    }
-  }
-  
-  .animate-scan-line {
-    animation: scan-line 2s ease-in-out infinite;
-  }
-  
-  .animate-scan-slow {
-    animation: scan-slow 8s ease-in-out infinite;
-  }
-  
-  .animate-fade-in {
-    animation: fade-in 0.6s ease-out;
-  }
-  
-  .animate-slide-in-right {
-    animation: slide-in-right 0.3s ease-out;
-  }
-  
-  .animate-terminal-glow {
-    animation: terminal-glow 2s ease-in-out infinite;
-  }
-  
+  /* Additional animation utilities */
   .animate-typing {
     animation: typing 2s steps(40, end);
-  }
-  
-  .animate-blink {
-    animation: blink 1s step-end infinite;
   }
   
   .animate-matrix-rain {
     animation: matrix-rain 3s linear infinite;
   }
   
-  .animate-bounce-subtle {
-    animation: bounce-subtle 2s ease-in-out infinite;
+  .animate-slide-in-right {
+    animation: slide-in-right 0.3s cubic-bezier(0, 0, 0.2, 1);
   }
   
   /* Interactive effects */
   .terminal-button {
-    @apply transition-all duration-200 ease-out;
+    @apply transition-all duration-200;
     @apply hover:scale-105 active:scale-95;
-    @apply hover:shadow-lg;
+    /* Shadow effect handled by custom styles below */
   }
   
   .terminal-button:hover {
@@ -215,9 +168,9 @@ body {
   }
   
   .terminal-card {
-    @apply transition-all duration-300 ease-out;
-    @apply hover:shadow-lg;
-    @apply hover:-translate-y-1 hover:scale-[1.02];
+    @apply transition-all duration-300;
+    /* Shadow effect handled by custom styles below */
+    @apply hover:scale-[1.02];
   }
   
   .terminal-card:hover {

@@ -170,7 +170,7 @@ export function EmptyState({
               {onCreateSession && (
                 <button
                   onClick={onCreateSession}
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-accent text-background rounded-lg hover:bg-accent/90 transition-all duration-200 font-medium shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 group"
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-accent text-background rounded-lg hover:bg-accent/90 transition-all duration-200 font-medium  hover:scale-105 active:scale-95 group"
                 >
                   <Plus className="w-5 h-5 group-hover:rotate-90 transition-transform duration-200" />
                   Create Your First Session

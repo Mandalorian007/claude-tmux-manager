@@ -89,7 +89,7 @@ export function TerminalNotification({
   if (!isVisible) return null
 
   return (
-    <div className={`fixed top-4 right-4 z-50 transform transition-all duration-300 ease-out ${isVisible ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'} max-w-md w-full ${styles.bg} ${styles.border} border rounded-lg shadow-2xl backdrop-blur-sm animate-slide-in-right`}>
+    <div className={`fixed top-4 right-4 z-50 transform transition-all duration-300 ease-out ${isVisible ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'} max-w-md w-full ${styles.bg} ${styles.border} border rounded-lg  backdrop-blur-sm animate-slide-in-right`}>
       {/* Progress bar */}
       {autoClose && (
         <div className="absolute top-0 left-0 right-0 h-1 bg-border/30 rounded-t-lg overflow-hidden">

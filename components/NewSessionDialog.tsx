@@ -79,8 +79,7 @@ export function NewSessionDialog({
       ${isVisible ? 'opacity-100' : 'opacity-0'}
     `}>
       <div className={`
-        bg-card-bg border-2 border-accent/30 rounded-lg p-6 w-full max-w-lg shadow-2xl
-        transition-all duration-300 transform
+        bg-card-bg border-2 border-accent/30 rounded-lg p-6 w-full max-w-lg         transition-all duration-300 transform
         ${isVisible ? 'scale-100 translate-y-0' : 'scale-95 translate-y-4'}
         relative overflow-hidden
       `} data-testid="new-session-dialog">

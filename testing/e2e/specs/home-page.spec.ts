@@ -57,7 +57,12 @@ test.describe('Home Page', () => {
     
     // Verify active session indicator
     if (firstSession.isActive) {
-      await expect(firstCard.locator('.animate-pulse')).toBeVisible()
+      // Check for the active session indicator element (green dot)
+      const activeIndicator = firstCard.locator('div[title="Active session"]')
+      await expect(activeIndicator).toBeAttached()
+      // Check the element has the correct classes
+      await expect(activeIndicator).toHaveClass(/bg-success/)
+      await expect(activeIndicator).toHaveClass(/rounded-full/)
     }
   })
 
