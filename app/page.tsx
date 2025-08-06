@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo, useRef } from 'react'
-import { Zap, Plus, RefreshCw, Search, Grid3x3, List, GitBranch, Terminal, Coffee } from 'lucide-react'
+import { Zap, Plus, RefreshCw, Search, Grid3x3, List, GitBranch, Terminal, Coffee, Menu, X } from 'lucide-react'
 import { WindowCard } from '@/components/WindowCard'
 import { NewWindowDialog } from '@/components/NewWindowDialog'
 import { SearchBar } from '@/components/SearchBar'
@@ -31,6 +31,12 @@ export default function HomePage() {
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all')
   const [viewMode, setViewMode] = useState<ViewMode>('grid')
   const [mountAnimation, setMountAnimation] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('sidebar-collapsed') === 'true'
+    }
+    return false
+  })
   const searchInputRef = useRef<HTMLInputElement>(null)
   const { showSuccess, showError, showInfo, NotificationContainer } = useTerminalNotifications()
   const { showWelcome, dismissWelcome } = useWelcomeMessage()
@@ -184,9 +190,14 @@ export default function HomePage() {
 
   // Keyboard shortcuts
   useKeyboardShortcuts({
-          onNewWindow: () => setIsDialogOpen(true),
+    onNewWindow: () => setIsDialogOpen(true),
     onRefresh: fetchWindows,
     onSearch: () => searchInputRef.current?.focus(),
+    onToggleSidebar: () => {
+      const newCollapsedState = !sidebarCollapsed
+      setSidebarCollapsed(newCollapsedState)
+      localStorage.setItem('sidebar-collapsed', newCollapsedState.toString())
+    },
     onEscape: () => {
       if (isDialogOpen) {
         setIsDialogOpen(false)
@@ -249,10 +260,11 @@ export default function HomePage() {
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-6 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div className="w-full px-2 py-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
           {/* Sidebar */}
-          <div className="lg:col-span-1">
+          <div className={`lg:col-span-2 transition-all duration-300 ${sidebarCollapsed ? 'lg:col-span-0' : ''}`}>
+            <div className={`${sidebarCollapsed ? 'lg:hidden' : ''}`}>
             <ProjectSidebar
               projects={projectCounts}
               selectedProject={selectedProject}
@@ -264,13 +276,26 @@ export default function HomePage() {
         readyForPRWindows={stats.readyForPR}
         idleWindows={windows.filter(w => !w.isActive).length}
             />
+            </div>
           </div>
 
           {/* Main Content */}
-          <div className="lg:col-span-3 space-y-4">
+          <div className={`space-y-4 transition-all duration-300 ${sidebarCollapsed ? 'lg:col-span-12' : 'lg:col-span-10'}`}>
             {/* Controls */}
             <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
               <div className="flex items-center gap-2">
+                {/* Sidebar Toggle */}
+                <button
+                  onClick={() => {
+                    const newCollapsedState = !sidebarCollapsed
+                    setSidebarCollapsed(newCollapsedState)
+                    localStorage.setItem('sidebar-collapsed', newCollapsedState.toString())
+                  }}
+                  className="lg:flex hidden items-center justify-center w-9 h-9 bg-transparent border border-border text-muted hover:text-foreground hover:border-accent/50 rounded transition-all duration-200"
+                  title={sidebarCollapsed ? 'Show Sidebar (Cmd/Ctrl+B)' : 'Hide Sidebar (Cmd/Ctrl+B)'}
+                >
+                  {sidebarCollapsed ? <Menu className="w-4 h-4" /> : <X className="w-4 h-4" />}
+                </button>
                 <ActionButton
                   variant="primary"
                   icon={Plus}
@@ -341,7 +366,13 @@ export default function HomePage() {
 
             {/* Windows Grid/List */}
             <div className={`
-              ${viewMode === 'grid' ? 'grid gap-4 grid-cols-1 xl:grid-cols-2' : 'space-y-1'}
+              ${viewMode === 'grid' 
+                ? `grid gap-3 grid-cols-1 ${sidebarCollapsed 
+                  ? 'md:grid-cols-2 lg:grid-cols-3' 
+                  : 'md:grid-cols-2 lg:grid-cols-3'
+                }`
+                : 'space-y-1'
+              }
               transition-all duration-300
               ${mountAnimation ? 'animate-fade-in' : ''}
             `}>

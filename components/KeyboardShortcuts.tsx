@@ -7,13 +7,15 @@ interface KeyboardShortcutsProps {
   onRefresh?: () => void
   onSearch?: () => void
   onEscape?: () => void
+  onToggleSidebar?: () => void
 }
 
 export function useKeyboardShortcuts({
   onNewWindow,
   onRefresh,
   onSearch,
-  onEscape
+  onEscape,
+  onToggleSidebar
 }: KeyboardShortcutsProps) {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -51,6 +53,12 @@ export function useKeyboardShortcuts({
         onSearch()
       }
 
+      // Cmd/Ctrl + B: Toggle sidebar
+      if (cmdOrCtrl && event.key === 'b' && onToggleSidebar) {
+        event.preventDefault()
+        onToggleSidebar()
+      }
+
       // Escape: Close modals or blur focus
       if (event.key === 'Escape' && onEscape) {
         onEscape()
@@ -62,7 +70,7 @@ export function useKeyboardShortcuts({
     return () => {
       document.removeEventListener('keydown', handleKeyDown)
     }
-  }, [onNewWindow, onRefresh, onSearch, onEscape])
+  }, [onNewWindow, onRefresh, onSearch, onEscape, onToggleSidebar])
 }
 
 interface ShortcutHintProps {

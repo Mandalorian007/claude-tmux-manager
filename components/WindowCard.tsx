@@ -1,4 +1,4 @@
-import { GitBranch, ExternalLink, Trash2, Activity, GitCommit, Terminal, Zap } from 'lucide-react'
+import { ExternalLink, Trash2, Activity, GitCommit, Terminal, Zap } from 'lucide-react'
 import type { WorkspaceWindow } from '@/types'
 import { useState } from 'react'
 
@@ -116,7 +116,7 @@ export function WindowCard({ window, onDelete, viewMode = 'grid' }: WindowCardPr
         data-feature={window.featureName}
     >
       {/* Header */}
-      <div className="p-4 pb-3">
+      <div className="px-6 pt-4 pb-3">
         <div className="flex items-start justify-between mb-2">
           <div className="flex items-center gap-2 min-w-0 flex-1">
             <h3 className="font-medium text-foreground truncate">
@@ -148,22 +148,10 @@ export function WindowCard({ window, onDelete, viewMode = 'grid' }: WindowCardPr
           </div>
         </div>
         
-        {/* Git branch and session ID */}
-        <div className="flex items-center gap-3 text-xs text-muted mb-3">
-          <div className="flex items-center gap-1">
-            <GitBranch className="w-3 h-3" />
-            <span className="font-mono">{window.gitStats.branch.replace('feature/', '')}</span>
-          </div>
-          <div className="font-mono">
-            {window.projectName}-{window.featureName}:0
-          </div>
-        </div>
-
-
       </div>
 
       {/* Terminal Preview */}
-      <div className="px-4 pb-4">
+      <div className="px-6 pb-4">
         <div className="bg-background/50 rounded border border-border p-3 font-mono text-xs relative overflow-hidden group-hover:bg-background/70 transition-colors duration-300">
           {/* Terminal header */}
           <div className="flex items-center justify-between mb-2 pb-2 border-b border-border/30">
@@ -218,7 +206,7 @@ export function WindowCard({ window, onDelete, viewMode = 'grid' }: WindowCardPr
       </div>
 
       {/* Action Buttons */}
-      <div className="px-4 pb-4">
+      <div className="px-6 pb-4">
         <div className="flex gap-2 items-center">
           {/* Command input field */}
           <div className="flex-1 relative">
