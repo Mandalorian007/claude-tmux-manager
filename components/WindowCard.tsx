@@ -42,7 +42,7 @@ export function WindowCard({ window, onDelete, viewMode = 'grid' }: WindowCardPr
         data-feature={window.featureName}
       >
         <div className="flex items-center justify-between">
-          {/* Left section: Project:Feature, Branch, Git stats */}
+          {/* Left section: Project:Feature, Branch */}
           <div className="flex items-center gap-4 min-w-0 flex-1">
             {/* Project:Feature name with status indicator */}
             <div className="flex items-center gap-2 min-w-0">
@@ -61,9 +61,12 @@ export function WindowCard({ window, onDelete, viewMode = 'grid' }: WindowCardPr
               <GitBranch className="w-3 h-3 flex-shrink-0" />
               <span className="font-mono truncate max-w-[120px]">{window.gitStats.branch.replace('feature/', '')}</span>
             </div>
-            
-            {/* Git stats - inline and compact */}
-            <div className="flex items-center gap-2 text-xs font-mono flex-shrink-0">
+          </div>
+          
+          {/* Right section: Git stats and Action buttons */}
+          <div className="flex items-center gap-3 flex-shrink-0">
+            {/* Git stats - moved to top right */}
+            <div className="flex items-center gap-2 text-xs font-mono">
               {totalAdded > 0 && (
                 <span className="text-success">+{totalAdded}</span>
               )}
@@ -74,13 +77,9 @@ export function WindowCard({ window, onDelete, viewMode = 'grid' }: WindowCardPr
                 <span className="text-error">-{totalModified}</span>
               )}
               {!hasChanges && (
-                <span className="text-muted opacity-60">clean</span>
+                <span className="text-muted opacity-60 text-xs">clean</span>
               )}
             </div>
-          </div>
-          
-          {/* Right section: Action buttons */}
-          <div className="flex items-center gap-1 flex-shrink-0">
             <button 
               className="p-1.5 text-muted hover:text-foreground hover:bg-secondary/50 rounded text-xs transition-all duration-200"
               title="View PR"
@@ -138,16 +137,33 @@ export function WindowCard({ window, onDelete, viewMode = 'grid' }: WindowCardPr
               <div className="w-2 h-2 bg-success rounded-full flex-shrink-0 animate-pulse" title="Active session" />
             )}
           </div>
-          {onDelete && (
-            <button
-              onClick={() => onDelete(window.projectName, window.featureName)}
-              className="opacity-0 group-hover:opacity-100 p-1.5 text-muted hover:text-error hover:bg-error/10 rounded transition-all duration-200"
-              title="Clean Up"
-              data-testid="delete-session-button"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          )}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {/* Git stats - moved to top right */}
+            <div className="flex items-center gap-2 text-xs font-mono">
+              {totalAdded > 0 && (
+                <span className="text-success">+{totalAdded}</span>
+              )}
+              {totalDeleted > 0 && (
+                <span className="text-warning">-{totalDeleted}</span>
+              )}
+              {totalModified > 0 && (
+                <span className="text-error">-{totalModified}</span>
+              )}
+              {!hasChanges && (
+                <span className="text-muted opacity-60 text-xs">clean</span>
+              )}
+            </div>
+            {onDelete && (
+              <button
+                onClick={() => onDelete(window.projectName, window.featureName)}
+                className="opacity-0 group-hover:opacity-100 p-1.5 text-muted hover:text-error hover:bg-error/10 rounded transition-all duration-200"
+                title="Clean Up"
+                data-testid="delete-session-button"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            )}
+          </div>
         </div>
         
         {/* Git branch and session ID */}
@@ -161,21 +177,7 @@ export function WindowCard({ window, onDelete, viewMode = 'grid' }: WindowCardPr
           </div>
         </div>
 
-        {/* Change stats */}
-        <div className="flex items-center gap-4 text-sm mb-3">
-          {totalAdded > 0 && (
-            <span className="text-success font-mono">+{totalAdded}</span>
-          )}
-          {totalDeleted > 0 && (
-            <span className="text-warning font-mono">-{totalDeleted}</span>
-          )}
-          {totalModified > 0 && (
-            <span className="text-error font-mono">-{totalModified}</span>
-          )}
-          {!hasChanges && (
-            <span className="text-muted text-xs">No pending changes</span>
-          )}
-        </div>
+
       </div>
 
       {/* Terminal Preview */}
