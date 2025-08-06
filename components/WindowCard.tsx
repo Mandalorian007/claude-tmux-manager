@@ -48,10 +48,13 @@ export function WindowCard({ window, onDelete, viewMode = 'grid' }: WindowCardPr
     
     fetchTerminalOutput()
     
-    // Refresh terminal output every 3 seconds when hovered
-    const interval = isHovered ? setInterval(fetchTerminalOutput, 3000) : null
+    // Base refresh every 5 seconds, faster 3 seconds when hovered
+    const baseInterval = setInterval(fetchTerminalOutput, 5000)
+    const hoverInterval = isHovered ? setInterval(fetchTerminalOutput, 3000) : null
+    
     return () => {
-      if (interval) clearInterval(interval)
+      clearInterval(baseInterval)
+      if (hoverInterval) clearInterval(hoverInterval)
     }
   }, [window.projectName, window.featureName, viewMode, isHovered])
   

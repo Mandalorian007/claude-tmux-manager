@@ -141,18 +141,21 @@ export default function HomePage() {
 
   // Compute stats and filtered data
   const { stats, projectCounts, filteredWindows } = useMemo(() => {
-    const projectCounts = windows.reduce((acc, window) => {
+    // Ensure windows is an array to prevent errors when API fails
+    const safeWindows = windows || []
+    
+    const projectCounts = safeWindows.reduce((acc, window) => {
       acc[window.projectName] = (acc[window.projectName] || 0) + 1
       return acc
     }, {} as Record<string, number>)
     
     const stats = {
-      windows: windows.length,
+      windows: safeWindows.length,
       projects: Object.keys(projectCounts).length,
-      readyForPR: windows.filter(w => w.gitStats.hasUncommittedChanges && w.gitStats.ahead > 0).length
+      readyForPR: safeWindows.filter(w => w.gitStats.hasUncommittedChanges && w.gitStats.ahead > 0).length
     }
     
-    let filtered = windows
+    let filtered = safeWindows
 
     // Filter by project
     if (selectedProject !== 'all') {
