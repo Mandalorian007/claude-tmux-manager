@@ -1,4 +1,4 @@
-import { GitBranch, ExternalLink, Edit3, Trash2, Activity, GitCommit, Terminal, Zap } from 'lucide-react'
+import { GitBranch, ExternalLink, Trash2, Activity, GitCommit, Terminal, Zap } from 'lucide-react'
 import type { WorkspaceWindow } from '@/types'
 import { useState } from 'react'
 
@@ -219,26 +219,46 @@ export function WindowCard({ window, onDelete, viewMode = 'grid' }: WindowCardPr
 
       {/* Action Buttons */}
       <div className="px-4 pb-4">
-        <div className="flex gap-2">
-          <button className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-transparent border border-border text-muted hover:text-foreground hover:border-accent/50 rounded text-sm transition-all duration-200">
-            <GitCommit className="w-4 h-4" />
-            View PR
-          </button>
-          <button className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-transparent border border-border text-muted hover:text-foreground hover:border-accent/50 rounded text-sm transition-all duration-200">
-            <Edit3 className="w-4 h-4" />
-            Edit
-          </button>
-          {onDelete && (
+        <div className="flex gap-2 items-center">
+          {/* Command input field */}
+          <div className="flex-1 relative">
+            <input
+              type="text"
+              placeholder="$ tmux send-keys -t ${window.projectName}:${window.featureName}"
+              className="w-full px-3 py-2 bg-background/50 border border-border text-foreground placeholder-muted/60 rounded text-sm font-mono focus:outline-none focus:border-accent/50 focus:bg-background/80 transition-all duration-200"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  // TODO: Handle command execution
+                  const command = e.currentTarget.value;
+                  console.log(`Executing: ${command}`);
+                  e.currentTarget.value = '';
+                }
+              }}
+            />
+            <Terminal className="absolute right-3 top-2.5 w-3 h-3 text-muted/50 pointer-events-none" />
+          </div>
+          
+          {/* Condensed action buttons */}
+          <div className="flex gap-1">
             <button 
-              onClick={() => onDelete(window.projectName, window.featureName)}
-              className="flex items-center justify-center gap-2 px-3 py-2 bg-error/10 border border-error/30 text-error hover:bg-error hover:text-white hover:border-error rounded text-sm transition-all duration-200"
-              data-testid="cleanup-button"
-              title="Clean Up Window"
+              className="flex items-center justify-center gap-1 px-2 py-2 bg-transparent border border-border text-muted hover:text-foreground hover:border-accent/50 rounded text-sm transition-all duration-200"
+              title="View PR"
             >
-              <Trash2 className="w-4 h-4" />
-              Clean Up
+              <GitCommit className="w-4 h-4" />
+              <span className="hidden sm:inline">PR</span>
             </button>
-          )}
+            {onDelete && (
+              <button 
+                onClick={() => onDelete(window.projectName, window.featureName)}
+                className="flex items-center justify-center gap-1 px-2 py-2 bg-error/10 border border-error/30 text-error hover:bg-error hover:text-white hover:border-error rounded text-sm transition-all duration-200"
+                data-testid="cleanup-button"
+                title="Clean Up Window"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span className="hidden sm:inline">Clean</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>
