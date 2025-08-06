@@ -1,11 +1,10 @@
 'use client'
 
 import { useState, useEffect, useMemo, useRef } from 'react'
-import { Zap, Plus, RefreshCw, Search, Grid3x3, List, GitBranch, Terminal, Coffee, Menu, X } from 'lucide-react'
-import { WindowCard } from '@/components/WindowCard'
+import { Zap, Plus, RefreshCw, Terminal, Coffee, Menu, X } from 'lucide-react'
 import { NewWindowDialog } from '@/components/NewWindowDialog'
-import { SearchBar } from '@/components/SearchBar'
-import { ProjectSidebar } from '@/components/ProjectSidebar'
+import { WindowListSidebar } from '@/components/WindowListSidebar'
+import { ExpandedWindowView } from '@/components/ExpandedWindowView'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { useKeyboardShortcuts, ShortcutHint } from '@/components/KeyboardShortcuts'
 import { ActionButton } from '@/components/ActionButton'
@@ -17,7 +16,6 @@ import { useEasterEgg } from '@/components/EasterEgg'
 import { mockSessions, useMockData } from '@/lib/mockData'
 import type { WorkspaceWindow, CreateWindowRequest, WindowResponse, CreateWindowResponse } from '@/types'
 
-type ViewMode = 'grid' | 'list'
 type FilterStatus = 'all' | 'active' | 'ready-for-pr' | 'idle'
 
 export default function HomePage() {
@@ -29,7 +27,7 @@ export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedProject, setSelectedProject] = useState<string>('all')
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all')
-  const [viewMode, setViewMode] = useState<ViewMode>('grid')
+  const [selectedWindow, setSelectedWindow] = useState<WorkspaceWindow | undefined>()
   const [mountAnimation, setMountAnimation] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -37,7 +35,6 @@ export default function HomePage() {
     }
     return false
   })
-  const searchInputRef = useRef<HTMLInputElement>(null)
   const { showSuccess, showError, showInfo, NotificationContainer } = useTerminalNotifications()
   const { showWelcome, dismissWelcome } = useWelcomeMessage()
   const { EasterEggModal, MatrixRain } = useEasterEgg()
@@ -139,8 +136,26 @@ export default function HomePage() {
     }
   }
 
-  // Compute stats and filtered data
-  const { stats, projectCounts, filteredWindows } = useMemo(() => {
+  // Auto-select first window when windows change
+  useEffect(() => {
+    if (windows.length > 0 && !selectedWindow) {
+      setSelectedWindow(windows[0])
+    } else if (selectedWindow && !windows.find(w => 
+      w.projectName === selectedWindow.projectName && 
+      w.featureName === selectedWindow.featureName
+    )) {
+      // Selected window was deleted, select first available
+      setSelectedWindow(windows.length > 0 ? windows[0] : undefined)
+    }
+  }, [windows, selectedWindow])
+
+  // Handle window selection
+  const handleWindowSelect = (window: WorkspaceWindow) => {
+    setSelectedWindow(window)
+  }
+
+  // Compute stats and project counts
+  const { stats, projectCounts } = useMemo(() => {
     // Ensure windows is an array to prevent errors when API fails
     const safeWindows = windows || []
     
@@ -155,47 +170,14 @@ export default function HomePage() {
       readyForPR: safeWindows.filter(w => w.gitStats.hasUncommittedChanges && w.gitStats.ahead > 0).length
     }
     
-    let filtered = safeWindows
-
-    // Filter by project
-    if (selectedProject !== 'all') {
-      filtered = filtered.filter(s => s.projectName === selectedProject)
-    }
-
-    // Filter by status
-    if (filterStatus !== 'all') {
-      filtered = filtered.filter(s => {
-        switch (filterStatus) {
-          case 'active':
-            return s.isActive
-          case 'ready-for-pr':
-            return s.gitStats.hasUncommittedChanges && s.gitStats.ahead > 0
-          case 'idle':
-            return !s.isActive
-          default:
-            return true
-        }
-      })
-    }
-
-    // Filter by search query
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase()
-      filtered = filtered.filter(s => 
-        s.projectName.toLowerCase().includes(query) ||
-        s.featureName.toLowerCase().includes(query) ||
-        s.gitStats.branch.toLowerCase().includes(query)
-      )
-    }
-
-    return { stats, projectCounts, filteredWindows: filtered }
-  }, [windows, selectedProject, filterStatus, searchQuery])
+    return { stats, projectCounts }
+  }, [windows])
 
   // Keyboard shortcuts
   useKeyboardShortcuts({
     onNewWindow: () => setIsDialogOpen(true),
     onRefresh: fetchWindows,
-    onSearch: () => searchInputRef.current?.focus(),
+    onSearch: () => {},  // Search is now handled in sidebar
     onToggleSidebar: () => {
       const newCollapsedState = !sidebarCollapsed
       setSidebarCollapsed(newCollapsedState)
@@ -204,11 +186,6 @@ export default function HomePage() {
     onEscape: () => {
       if (isDialogOpen) {
         setIsDialogOpen(false)
-      } else {
-        searchInputRef.current?.blur()
-        if (document.activeElement && 'blur' in document.activeElement) {
-          (document.activeElement as HTMLElement).blur()
-        }
       }
     }
   })
@@ -265,11 +242,14 @@ export default function HomePage() {
 
         {/* Main Content - grows to fill space */}
         <main className="flex-1 w-full px-2 py-6">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-200px)]">
             {/* Sidebar */}
-            <div className={`lg:col-span-2 transition-all duration-300 ${sidebarCollapsed ? 'lg:col-span-0' : ''}`}>
-              <div className={`${sidebarCollapsed ? 'lg:hidden' : ''}`}>
-                <ProjectSidebar
+            <div className={`transition-all duration-300 ${sidebarCollapsed ? 'lg:col-span-0' : 'lg:col-span-4'}`}>
+              <div className={`h-full ${sidebarCollapsed ? 'lg:hidden' : ''}`}>
+                <WindowListSidebar
+                  windows={windows}
+                  selectedWindow={selectedWindow}
+                  onWindowSelect={handleWindowSelect}
                   projects={projectCounts}
                   selectedProject={selectedProject}
                   onProjectSelect={setSelectedProject}
@@ -279,14 +259,16 @@ export default function HomePage() {
                   activeWindows={windows.filter(w => w.isActive).length}
                   readyForPRWindows={stats.readyForPR}
                   idleWindows={windows.filter(w => !w.isActive).length}
+                  searchQuery={searchQuery}
+                  onSearchChange={setSearchQuery}
                 />
               </div>
             </div>
 
             {/* Main Content */}
-            <div className={`space-y-4 transition-all duration-300 ${sidebarCollapsed ? 'lg:col-span-12' : 'lg:col-span-10'}`}>
+            <div className={`transition-all duration-300 flex flex-col ${sidebarCollapsed ? 'lg:col-span-12' : 'lg:col-span-8'}`}>
               {/* Controls */}
-              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between mb-6">
                 <div className="flex items-center gap-2">
                   {/* Sidebar Toggle */}
                   <button
@@ -314,32 +296,6 @@ export default function HomePage() {
                 </div>
 
                 <div className="flex items-center gap-4">
-                  <SearchBar
-                    ref={searchInputRef}
-                    value={searchQuery}
-                    onChange={setSearchQuery}
-                    placeholder="Search windows, branches, or files..."
-                  />
-                  
-                  <div className="flex items-center gap-1 bg-card-bg rounded-lg p-1">
-                    <button
-                      onClick={() => setViewMode('grid')}
-                      className={`p-2 rounded ${viewMode === 'grid' ? 'bg-secondary text-foreground' : 'text-muted hover:text-foreground'} transition-colors`}
-                      title="Grid view"
-                      data-testid="view-mode-grid"
-                    >
-                      <Grid3x3 className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => setViewMode('list')}
-                      className={`p-2 rounded ${viewMode === 'list' ? 'bg-secondary text-foreground' : 'text-muted hover:text-foreground'} transition-colors`}
-                      title="List view"
-                      data-testid="view-mode-list"
-                    >
-                      <List className="w-4 h-4" />
-                    </button>
-                  </div>
-
                   <button
                     onClick={() => {
                       fetchWindows()
@@ -368,44 +324,24 @@ export default function HomePage() {
                 </div>
               </div>
 
-              {/* Windows Grid/List */}
-              <div className={`
-                ${viewMode === 'grid' 
-                  ? `grid gap-3 grid-cols-1 ${sidebarCollapsed 
-                    ? 'md:grid-cols-2 lg:grid-cols-2' 
-                    : 'md:grid-cols-2 lg:grid-cols-2'
-                  }`
-                  : 'space-y-1'
-                }
-                transition-all duration-300
-                ${mountAnimation ? 'animate-fade-in' : ''}
-              `}>
+              {/* Expanded Window View */}
+              <div className="flex-1 overflow-hidden">
                 {isLoading ? (
-                  <div className="col-span-full">
+                  <div className="h-full flex items-center justify-center">
                     <EmptyState type="loading" />
                   </div>
-                ) : filteredWindows.length === 0 ? (
-                  <EmptyState
-                    type={searchQuery || selectedProject !== 'all' || filterStatus !== 'all' ? 'no-results' : 'no-windows'}
-                    searchQuery={searchQuery}
-                    selectedProject={selectedProject !== 'all' ? selectedProject : undefined}
-                    filterStatus={filterStatus !== 'all' ? filterStatus : undefined}
-                    onCreateWindow={() => setIsDialogOpen(true)}
-                  />
+                ) : windows.length === 0 ? (
+                  <div className="h-full flex items-center justify-center">
+                    <EmptyState
+                      type="no-windows"
+                      onCreateWindow={() => setIsDialogOpen(true)}
+                    />
+                  </div>
                 ) : (
-                  filteredWindows.map((window, index) => (
-                    <div
-                      key={`${window.projectName}:${window.featureName}`}
-                      className="animate-fade-in"
-                      style={{ animationDelay: `${index * 100}ms` }}
-                    >
-                      <WindowCard
-                        window={window}
-                        onDelete={handleDeleteWindow}
-                        viewMode={viewMode}
-                      />
-                    </div>
-                  ))
+                  <ExpandedWindowView
+                    window={selectedWindow}
+                    onDelete={handleDeleteWindow}
+                  />
                 )}
               </div>
             </div>

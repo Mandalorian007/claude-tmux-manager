@@ -6,9 +6,11 @@ interface WindowCardProps {
   window: WorkspaceWindow
   onDelete?: (projectName: string, featureName: string) => void
   viewMode?: 'grid' | 'list'
+  onSelect?: (window: WorkspaceWindow) => void
+  isSelected?: boolean
 }
 
-export function WindowCard({ window, onDelete, viewMode = 'grid' }: WindowCardProps) {
+export function WindowCard({ window, onDelete, viewMode = 'grid', onSelect, isSelected }: WindowCardProps) {
   const [isHovered, setIsHovered] = useState(false)
   const [terminalCursor, setTerminalCursor] = useState(true)
   const [terminalOutput, setTerminalOutput] = useState<string>('')
@@ -124,9 +126,12 @@ export function WindowCard({ window, onDelete, viewMode = 'grid' }: WindowCardPr
   if (viewMode === 'list') {
     return (
       <div 
-        className="bg-card-bg border border-border rounded-lg hover:border-accent/50 transition-all duration-200 group px-4 py-2"
+        className={`bg-card-bg border border-border rounded-lg hover:border-accent/50 transition-all duration-200 group px-4 py-2 cursor-pointer ${
+          isSelected ? 'ring-2 ring-accent border-accent' : ''
+        }`}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
+        onClick={() => onSelect?.(window)}
         data-testid="window-card"
         data-project={window.projectName}
         data-feature={window.featureName}
@@ -223,9 +228,12 @@ export function WindowCard({ window, onDelete, viewMode = 'grid' }: WindowCardPr
   // Grid view - original detailed layout
   return (
     <div 
-      className="bg-card-bg border border-border rounded-lg overflow-hidden hover:border-accent/50 transition-all duration-200 group"
+      className={`bg-card-bg border border-border rounded-lg overflow-hidden hover:border-accent/50 transition-all duration-200 group cursor-pointer ${
+        isSelected ? 'ring-2 ring-accent border-accent' : ''
+      }`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      onClick={() => onSelect?.(window)}
               data-testid="window-card"
               data-project={window.projectName}
         data-feature={window.featureName}
