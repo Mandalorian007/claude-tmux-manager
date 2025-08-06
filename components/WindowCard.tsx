@@ -213,10 +213,48 @@ export function WindowCard({ window, onDelete, viewMode = 'grid', onSelect, isSe
               <Edit3 className="w-3 h-3" />
             </button>
             <button 
-              className="p-1.5 text-muted hover:text-foreground hover:bg-secondary/50 rounded text-xs transition-all duration-200"
-              title="Open Terminal"
+              className="p-1.5 text-muted hover:text-foreground hover:bg-secondary/50 rounded text-xs transition-all duration-200 terminal-button"
+              title="Open Terminal (tmux attach)"
+              onClick={async (e) => {
+                e.stopPropagation()
+                try {
+                  const response = await fetch(
+                    `/api/windows/${encodeURIComponent(window.projectName)}/${encodeURIComponent(window.featureName)}/terminal`,
+                    { method: 'POST' }
+                  )
+                  
+                  const result = await response.json()
+                  
+                  if (response.ok && result.success) {
+                    console.log(`✓ Terminal opened for ${window.projectName}:${window.featureName}`)
+                  } else if (response.status === 202 && result.fallback) {
+                    // Fallback - show manual instructions
+                    const instructions = result.fallback.instructions.join('\n')
+                    const shouldCopy = globalThis.window.confirm(
+                      `Could not open terminal automatically.\n\n${instructions}\n\nCopy tmux command to clipboard?`
+                    )
+                    
+                    if (shouldCopy && navigator.clipboard) {
+                      try {
+                        await navigator.clipboard.writeText(result.fallback.message)
+                        console.log(`✓ Tmux command copied to clipboard: ${result.fallback.message}`)
+                      } catch (clipError) {
+                        console.warn('Failed to copy to clipboard:', clipError)
+                        // Fallback: show in console
+                        console.log(`Manual command: ${result.fallback.message}`)
+                      }
+                    } else {
+                      console.log(`Manual command: ${result.fallback.message}`)
+                    }
+                  } else {
+                    console.error(`✗ Failed to open terminal: ${result.error || response.statusText}`)
+                  }
+                } catch (error) {
+                  console.error(`✗ Failed to open terminal:`, error)
+                }
+              }}
             >
-              <ExternalLink className="w-3 h-3" />
+              <Terminal className="w-3 h-3" />
             </button>
 
           </div>
@@ -422,6 +460,51 @@ export function WindowCard({ window, onDelete, viewMode = 'grid', onSelect, isSe
               <span className="hidden sm:inline">
                 {prStatus.loading ? 'PR' : prStatus.found ? 'View' : 'PR'}
               </span>
+            </button>
+            <button 
+              className="flex items-center justify-center gap-1 px-2 py-2 bg-accent/10 border border-accent/30 text-accent hover:bg-accent/20 hover:border-accent/50 rounded text-sm transition-all duration-200 terminal-button"
+              title="Open Terminal (tmux attach)"
+              onClick={async (e) => {
+                e.stopPropagation()
+                try {
+                  const response = await fetch(
+                    `/api/windows/${encodeURIComponent(window.projectName)}/${encodeURIComponent(window.featureName)}/terminal`,
+                    { method: 'POST' }
+                  )
+                  
+                  const result = await response.json()
+                  
+                  if (response.ok && result.success) {
+                    console.log(`✓ Terminal opened for ${window.projectName}:${window.featureName}`)
+                  } else if (response.status === 202 && result.fallback) {
+                    // Fallback - show manual instructions
+                    const instructions = result.fallback.instructions.join('\n')
+                    const shouldCopy = globalThis.window.confirm(
+                      `Could not open terminal automatically.\n\n${instructions}\n\nCopy tmux command to clipboard?`
+                    )
+                    
+                    if (shouldCopy && navigator.clipboard) {
+                      try {
+                        await navigator.clipboard.writeText(result.fallback.message)
+                        console.log(`✓ Tmux command copied to clipboard: ${result.fallback.message}`)
+                      } catch (clipError) {
+                        console.warn('Failed to copy to clipboard:', clipError)
+                        // Fallback: show in console
+                        console.log(`Manual command: ${result.fallback.message}`)
+                      }
+                    } else {
+                      console.log(`Manual command: ${result.fallback.message}`)
+                    }
+                  } else {
+                    console.error(`✗ Failed to open terminal: ${result.error || response.statusText}`)
+                  }
+                } catch (error) {
+                  console.error(`✗ Failed to open terminal:`, error)
+                }
+              }}
+            >
+              <Terminal className="w-4 h-4" />
+              <span className="hidden sm:inline">Term</span>
             </button>
             {onDelete && (
               <button 
