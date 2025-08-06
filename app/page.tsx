@@ -219,196 +219,198 @@ export default function HomePage() {
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-background text-foreground">
-      {/* Header */}
-      <header className="border-b border-border bg-card-bg relative overflow-hidden">
-        {/* Terminal scan line effect */}
-        <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-accent/40 to-transparent animate-scan-slow" />
-        
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 group">
-                <Zap className="w-6 h-6 text-accent animate-bounce-subtle group-hover:animate-terminal-glow transition-all duration-300" />
-                <h1 className="text-xl font-semibold text-foreground font-mono">
-                  <span className="text-accent">$</span>{' '}
-                  <span className="terminal-glow group-hover:text-accent transition-colors duration-300">
-                    claude-tmux-manager
+      <div className="min-h-screen bg-background text-foreground flex flex-col">
+        {/* Header */}
+        <header className="border-b border-border bg-card-bg relative overflow-hidden">
+          {/* Terminal scan line effect */}
+          <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-accent/40 to-transparent animate-scan-slow" />
+          
+          <div className="max-w-7xl mx-auto px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 group">
+                  <Zap className="w-6 h-6 text-accent animate-bounce-subtle group-hover:animate-terminal-glow transition-all duration-300" />
+                  <h1 className="text-xl font-semibold text-foreground font-mono">
+                    <span className="text-accent">$</span>{' '}
+                    <span className="terminal-glow group-hover:text-accent transition-colors duration-300">
+                      claude-tmux-manager
+                    </span>
+                    <span className="animate-blink text-accent ml-1">_</span>
+                  </h1>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-6 text-sm font-mono" data-testid="stats-container">
+                <div className="flex items-center gap-1 px-3 py-1 bg-background/30 rounded border border-border/50 hover:border-accent/30 transition-colors">
+                  <span className="text-muted">windows:</span>
+                  <span className="font-medium text-success animate-pulse" data-testid="stat-windows">{stats.windows}</span>
+                </div>
+                <div className="flex items-center gap-1 px-3 py-1 bg-background/30 rounded border border-border/50 hover:border-accent/30 transition-colors">
+                  <span className="text-muted">projects:</span>
+                  <span className="font-medium text-accent" data-testid="stat-projects">{stats.projects}</span>
+                </div>
+                <div className="flex items-center gap-1 px-3 py-1 bg-background/30 rounded border border-border/50 hover:border-accent/30 transition-colors">
+                  <span className="text-muted">ready:</span>
+                  <span className={`font-medium ${stats.readyForPR > 0 ? 'text-warning animate-pulse' : 'text-muted'}`} data-testid="stat-ready">
+                    {stats.readyForPR}
                   </span>
-                  <span className="animate-blink text-accent ml-1">_</span>
-                </h1>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-6 text-sm font-mono" data-testid="stats-container">
-              <div className="flex items-center gap-1 px-3 py-1 bg-background/30 rounded border border-border/50 hover:border-accent/30 transition-colors">
-                        <span className="text-muted">windows:</span>
-        <span className="font-medium text-success animate-pulse" data-testid="stat-windows">{stats.windows}</span>
-              </div>
-              <div className="flex items-center gap-1 px-3 py-1 bg-background/30 rounded border border-border/50 hover:border-accent/30 transition-colors">
-                <span className="text-muted">projects:</span>
-                <span className="font-medium text-accent" data-testid="stat-projects">{stats.projects}</span>
-              </div>
-              <div className="flex items-center gap-1 px-3 py-1 bg-background/30 rounded border border-border/50 hover:border-accent/30 transition-colors">
-                <span className="text-muted">ready:</span>
-                <span className={`font-medium ${stats.readyForPR > 0 ? 'text-warning animate-pulse' : 'text-muted'}`} data-testid="stat-ready">
-                  {stats.readyForPR}
-                </span>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </header>
+        </header>
 
-      <div className="w-full px-2 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
-          {/* Sidebar */}
-          <div className={`lg:col-span-2 transition-all duration-300 ${sidebarCollapsed ? 'lg:col-span-0' : ''}`}>
-            <div className={`${sidebarCollapsed ? 'lg:hidden' : ''}`}>
-            <ProjectSidebar
-              projects={projectCounts}
-              selectedProject={selectedProject}
-              onProjectSelect={setSelectedProject}
-              filterStatus={filterStatus}
-              onFilterChange={setFilterStatus}
-                      totalWindows={windows.length}
-        activeWindows={windows.filter(w => w.isActive).length}
-        readyForPRWindows={stats.readyForPR}
-        idleWindows={windows.filter(w => !w.isActive).length}
-            />
-            </div>
-          </div>
-
-          {/* Main Content */}
-          <div className={`space-y-4 transition-all duration-300 ${sidebarCollapsed ? 'lg:col-span-12' : 'lg:col-span-10'}`}>
-            {/* Controls */}
-            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-              <div className="flex items-center gap-2">
-                {/* Sidebar Toggle */}
-                <button
-                  onClick={() => {
-                    const newCollapsedState = !sidebarCollapsed
-                    setSidebarCollapsed(newCollapsedState)
-                    localStorage.setItem('sidebar-collapsed', newCollapsedState.toString())
-                  }}
-                  className="lg:flex hidden items-center justify-center w-9 h-9 bg-transparent border border-border text-muted hover:text-foreground hover:border-accent/50 rounded transition-all duration-200"
-                  title={sidebarCollapsed ? 'Show Sidebar (Cmd/Ctrl+B)' : 'Hide Sidebar (Cmd/Ctrl+B)'}
-                >
-                  {sidebarCollapsed ? <Menu className="w-4 h-4" /> : <X className="w-4 h-4" />}
-                </button>
-                <ActionButton
-                  variant="primary"
-                  icon={Plus}
-                  onClick={() => setIsDialogOpen(true)}
-                  data-testid="new-session-button"
-                >
-                  New Window
-                </ActionButton>
-                <div className="hidden lg:block">
-                  <ShortcutHint keys={['mod', 'n']} description="New window" />
-                </div>
-              </div>
-
-              <div className="flex items-center gap-4">
-                <SearchBar
-                  ref={searchInputRef}
-                  value={searchQuery}
-                  onChange={setSearchQuery}
-                  placeholder="Search windows, branches, or files..."
+        {/* Main Content - grows to fill space */}
+        <main className="flex-1 w-full px-2 py-6">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
+            {/* Sidebar */}
+            <div className={`lg:col-span-2 transition-all duration-300 ${sidebarCollapsed ? 'lg:col-span-0' : ''}`}>
+              <div className={`${sidebarCollapsed ? 'lg:hidden' : ''}`}>
+                <ProjectSidebar
+                  projects={projectCounts}
+                  selectedProject={selectedProject}
+                  onProjectSelect={setSelectedProject}
+                  filterStatus={filterStatus}
+                  onFilterChange={setFilterStatus}
+                  totalWindows={windows.length}
+                  activeWindows={windows.filter(w => w.isActive).length}
+                  readyForPRWindows={stats.readyForPR}
+                  idleWindows={windows.filter(w => !w.isActive).length}
                 />
-                
-                <div className="flex items-center gap-1 bg-card-bg rounded-lg p-1">
-                  <button
-                    onClick={() => setViewMode('grid')}
-                    className={`p-2 rounded ${viewMode === 'grid' ? 'bg-secondary text-foreground' : 'text-muted hover:text-foreground'} transition-colors`}
-                    title="Grid view"
-                    data-testid="view-mode-grid"
-                  >
-                    <Grid3x3 className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => setViewMode('list')}
-                    className={`p-2 rounded ${viewMode === 'list' ? 'bg-secondary text-foreground' : 'text-muted hover:text-foreground'} transition-colors`}
-                    title="List view"
-                    data-testid="view-mode-list"
-                  >
-                    <List className="w-4 h-4" />
-                  </button>
-                </div>
-
-                <button
-                  onClick={() => {
-                    fetchWindows()
-                    if (!isRefreshing) {
-                      showInfo('Refreshing windows...', {
-                        message: 'Scanning tmux processes and git repositories',
-                        command: 'tmux list-windows -t claude-tmux-manager && git worktree list'
-                      })
-                    }
-                  }}
-                  className={`
-                    p-2 text-muted hover:text-foreground rounded-lg hover:bg-card-bg
-                    transition-all duration-200 hover:scale-110 active:scale-95
-                    ${isRefreshing ? 'text-accent' : ''}
-                    group
-                  `}
-                  disabled={isRefreshing}
-                  title={isRefreshing ? 'Refreshing...' : 'Refresh windows'}
-                  data-testid="refresh-windows"
-                >
-                  <RefreshCw className={`
-                    w-4 h-4 transition-transform duration-200
-                    ${isRefreshing ? 'animate-spin text-accent' : 'group-hover:rotate-180'}
-                  `} />
-                </button>
               </div>
             </div>
 
-            {/* Windows Grid/List */}
-            <div className={`
-              ${viewMode === 'grid' 
-                ? `grid gap-3 grid-cols-1 ${sidebarCollapsed 
-                  ? 'md:grid-cols-2 lg:grid-cols-3' 
-                  : 'md:grid-cols-2 lg:grid-cols-3'
-                }`
-                : 'space-y-1'
-              }
-              transition-all duration-300
-              ${mountAnimation ? 'animate-fade-in' : ''}
-            `}>
-              {isLoading ? (
-                <div className="col-span-full">
-                  <EmptyState type="loading" />
-                </div>
-              ) : filteredWindows.length === 0 ? (
-                <EmptyState
-                  type={searchQuery || selectedProject !== 'all' || filterStatus !== 'all' ? 'no-results' : 'no-windows'}
-                  searchQuery={searchQuery}
-                  selectedProject={selectedProject !== 'all' ? selectedProject : undefined}
-                  filterStatus={filterStatus !== 'all' ? filterStatus : undefined}
-                  onCreateWindow={() => setIsDialogOpen(true)}
-                />
-              ) : (
-                filteredWindows.map((window, index) => (
-                  <div
-                    key={`${window.projectName}:${window.featureName}`}
-                    className="animate-fade-in"
-                    style={{ animationDelay: `${index * 100}ms` }}
+            {/* Main Content */}
+            <div className={`space-y-4 transition-all duration-300 ${sidebarCollapsed ? 'lg:col-span-12' : 'lg:col-span-10'}`}>
+              {/* Controls */}
+              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {/* Sidebar Toggle */}
+                  <button
+                    onClick={() => {
+                      const newCollapsedState = !sidebarCollapsed
+                      setSidebarCollapsed(newCollapsedState)
+                      localStorage.setItem('sidebar-collapsed', newCollapsedState.toString())
+                    }}
+                    className="lg:flex hidden items-center justify-center w-9 h-9 bg-transparent border border-border text-muted hover:text-foreground hover:border-accent/50 rounded transition-all duration-200"
+                    title={sidebarCollapsed ? 'Show Sidebar (Cmd/Ctrl+B)' : 'Hide Sidebar (Cmd/Ctrl+B)'}
                   >
-                    <WindowCard
-                      window={window}
-                      onDelete={handleDeleteWindow}
-                      viewMode={viewMode}
-                    />
+                    {sidebarCollapsed ? <Menu className="w-4 h-4" /> : <X className="w-4 h-4" />}
+                  </button>
+                  <ActionButton
+                    variant="primary"
+                    icon={Plus}
+                    onClick={() => setIsDialogOpen(true)}
+                    data-testid="new-session-button"
+                  >
+                    New Window
+                  </ActionButton>
+                  <div className="hidden lg:block">
+                    <ShortcutHint keys={['mod', 'n']} description="New window" />
                   </div>
-                ))
-              )}
+                </div>
+
+                <div className="flex items-center gap-4">
+                  <SearchBar
+                    ref={searchInputRef}
+                    value={searchQuery}
+                    onChange={setSearchQuery}
+                    placeholder="Search windows, branches, or files..."
+                  />
+                  
+                  <div className="flex items-center gap-1 bg-card-bg rounded-lg p-1">
+                    <button
+                      onClick={() => setViewMode('grid')}
+                      className={`p-2 rounded ${viewMode === 'grid' ? 'bg-secondary text-foreground' : 'text-muted hover:text-foreground'} transition-colors`}
+                      title="Grid view"
+                      data-testid="view-mode-grid"
+                    >
+                      <Grid3x3 className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => setViewMode('list')}
+                      className={`p-2 rounded ${viewMode === 'list' ? 'bg-secondary text-foreground' : 'text-muted hover:text-foreground'} transition-colors`}
+                      title="List view"
+                      data-testid="view-mode-list"
+                    >
+                      <List className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      fetchWindows()
+                      if (!isRefreshing) {
+                        showInfo('Refreshing windows...', {
+                          message: 'Scanning tmux processes and git repositories',
+                          command: 'tmux list-windows -t claude-tmux-manager && git worktree list'
+                        })
+                      }
+                    }}
+                    className={`
+                      p-2 text-muted hover:text-foreground rounded-lg hover:bg-card-bg
+                      transition-all duration-200 hover:scale-110 active:scale-95
+                      ${isRefreshing ? 'text-accent' : ''}
+                      group
+                    `}
+                    disabled={isRefreshing}
+                    title={isRefreshing ? 'Refreshing...' : 'Refresh windows'}
+                    data-testid="refresh-windows"
+                  >
+                    <RefreshCw className={`
+                      w-4 h-4 transition-transform duration-200
+                      ${isRefreshing ? 'animate-spin text-accent' : 'group-hover:rotate-180'}
+                    `} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Windows Grid/List */}
+              <div className={`
+                ${viewMode === 'grid' 
+                  ? `grid gap-3 grid-cols-1 ${sidebarCollapsed 
+                    ? 'md:grid-cols-2 lg:grid-cols-3' 
+                    : 'md:grid-cols-2 lg:grid-cols-3'
+                  }`
+                  : 'space-y-1'
+                }
+                transition-all duration-300
+                ${mountAnimation ? 'animate-fade-in' : ''}
+              `}>
+                {isLoading ? (
+                  <div className="col-span-full">
+                    <EmptyState type="loading" />
+                  </div>
+                ) : filteredWindows.length === 0 ? (
+                  <EmptyState
+                    type={searchQuery || selectedProject !== 'all' || filterStatus !== 'all' ? 'no-results' : 'no-windows'}
+                    searchQuery={searchQuery}
+                    selectedProject={selectedProject !== 'all' ? selectedProject : undefined}
+                    filterStatus={filterStatus !== 'all' ? filterStatus : undefined}
+                    onCreateWindow={() => setIsDialogOpen(true)}
+                  />
+                ) : (
+                  filteredWindows.map((window, index) => (
+                    <div
+                      key={`${window.projectName}:${window.featureName}`}
+                      className="animate-fade-in"
+                      style={{ animationDelay: `${index * 100}ms` }}
+                    >
+                      <WindowCard
+                        window={window}
+                        onDelete={handleDeleteWindow}
+                        viewMode={viewMode}
+                      />
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           </div>
-        </div>
+        </main>
         
-        {/* Delightful Footer */}
-        <footer className="mt-12 py-6 border-t border-border/30">
+        {/* Sticky Footer */}
+        <footer className="mt-auto py-6 border-t border-border/30 bg-background">
           <div className="flex items-center justify-center gap-2 text-xs text-muted">
             <Terminal className="w-3 h-3" />
             <span>Crafted with</span>
@@ -444,7 +446,6 @@ export default function HomePage() {
         onSubmit={handleCreateWindow}
         isLoading={isCreating}
       />
-      </div>
     </ErrorBoundary>
   )
 }
