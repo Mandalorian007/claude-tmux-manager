@@ -2,6 +2,7 @@ import type { WindowInfo } from '@/types'
 import { CommandExecutor } from '../command-executor'
 import { TmuxError, ValidationError } from '../errors'
 import { logger } from '../logger'
+import { expandPath } from '../utils'
 
 const TMUX_SESSION = 'claude-tmux-manager'
 const WINDOW_NAME_REGEX = /^[a-zA-Z0-9][a-zA-Z0-9:._-]*$/
@@ -78,7 +79,8 @@ export class TmuxAdapter {
       if (!line.trim()) continue
 
       try {
-        const colonIndex = line.indexOf(':')
+        // Use lastIndexOf to handle window names that contain colons (e.g., "project:feature")
+        const colonIndex = line.lastIndexOf(':')
         if (colonIndex === -1) {
           this.logger.warn('Invalid window format, no path separator', { line })
           continue
@@ -117,6 +119,9 @@ export class TmuxAdapter {
     // Validate inputs
     this.validateWindowName(name)
     this.validatePath(path)
+    
+    // Expand path for tilde support
+    const expandedPath = expandPath(path)
 
     try {
       // Ensure session exists before creating window
@@ -128,7 +133,7 @@ export class TmuxAdapter {
         throw new TmuxError(`Window '${name}' already exists`)
       }
 
-      const command = `tmux new-window -t ${CommandExecutor.escapeShellArg(TMUX_SESSION)} -n ${CommandExecutor.escapeShellArg(name)} -c ${CommandExecutor.escapeShellArg(path)}`
+      const command = `tmux new-window -t ${CommandExecutor.escapeShellArg(TMUX_SESSION)} -n ${CommandExecutor.escapeShellArg(name)} -c ${CommandExecutor.escapeShellArg(expandedPath)} \\; send-keys "export $(cat .env | xargs) && claude --dangerously-skip-permissions" Enter`
       
       await CommandExecutor.execute(command, {
         timeout: COMMAND_TIMEOUT
@@ -140,10 +145,66 @@ export class TmuxAdapter {
       if (error instanceof TmuxError || error instanceof ValidationError) {
         throw error
       }
-      const cmd = `tmux new-window -t ${CommandExecutor.escapeShellArg(TMUX_SESSION)} -n ${CommandExecutor.escapeShellArg(name)} -c ${CommandExecutor.escapeShellArg(path)}`
+              const cmd = `tmux new-window -t ${CommandExecutor.escapeShellArg(TMUX_SESSION)} -n ${CommandExecutor.escapeShellArg(name)} -c ${CommandExecutor.escapeShellArg(expandedPath)} \\; send-keys "export $(cat .env | xargs) && claude --dangerously-skip-permissions" Enter`
       throw new TmuxError(
         `Failed to create window '${name}': ${(error as Error).message}`,
         cmd,
+        (error as any)?.code
+      )
+    }
+  }
+
+  /**
+   * Send command to an existing tmux window
+   */
+  async sendCommand(windowName: string, command: string): Promise<void> {
+    this.logger.debug('Sending command to tmux window', { windowName, command })
+
+    // Validate inputs
+    this.validateWindowName(windowName)
+    if (!command || typeof command !== 'string') {
+      throw new ValidationError('Command must be a non-empty string', 'command', command)
+    }
+
+    try {
+      // Ensure session exists
+      const sessionExists = await this.sessionExists()
+      if (!sessionExists) {
+        throw new TmuxError(`Tmux session '${TMUX_SESSION}' does not exist`)
+      }
+
+      // Check if window exists
+      const existingWindows = await this.listWindows()
+      if (!existingWindows.some(w => w.name === windowName)) {
+        throw new TmuxError(`Window '${windowName}' does not exist`)
+      }
+
+      // Send the command text first
+      const sendCommandText = `tmux send-keys -t ${CommandExecutor.escapeShellArg(TMUX_SESSION)}:${CommandExecutor.escapeShellArg(windowName)} ${CommandExecutor.escapeShellArg(command)}`
+      
+      await CommandExecutor.execute(sendCommandText, {
+        timeout: COMMAND_TIMEOUT
+      })
+
+      // Wait 0.5 seconds for UI to register
+      await new Promise(resolve => setTimeout(resolve, 500))
+
+      // Send Enter to submit
+      const sendEnter = `tmux send-keys -t ${CommandExecutor.escapeShellArg(TMUX_SESSION)}:${CommandExecutor.escapeShellArg(windowName)} Enter`
+      
+      await CommandExecutor.execute(sendEnter, {
+        timeout: COMMAND_TIMEOUT
+      })
+
+      this.logger.info('Successfully sent command to tmux window', { windowName, command })
+    } catch (error) {
+      this.logger.error('Failed to send command to tmux window', error, { windowName, command })
+      if (error instanceof TmuxError || error instanceof ValidationError) {
+        throw error
+      }
+      throw new TmuxError(
+        `Failed to send command to window '${windowName}': ${(error as Error).message}`,
+        `tmux send-keys -t ${TMUX_SESSION}:${windowName}`,
         (error as any)?.code
       )
     }

@@ -91,6 +91,22 @@ class WindowManagerImpl extends SessionManager {
     }
   }
 
+  /**
+   * Send command to a window
+   */
+  async sendCommand(projectName: string, featureName: string, command: string): Promise<WindowOperationResult<void>> {
+    try {
+      // Use the inherited sendCommand method from SessionManager
+      await super.sendCommand(projectName, featureName, command)
+      return { success: true }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      }
+    }
+  }
+
   async healthCheckWindow(projectName: string, featureName: string): Promise<WindowHealthCheck> {
     // Find the session/window first
     const sessions = await this.listSessions()

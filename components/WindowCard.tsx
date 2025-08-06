@@ -1,6 +1,6 @@
 import { ExternalLink, Trash2, Activity, GitCommit, Terminal, Zap, GitBranch, Edit3 } from 'lucide-react'
 import type { WorkspaceWindow } from '@/types'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 interface WindowCardProps {
   window: WorkspaceWindow
@@ -11,15 +11,54 @@ interface WindowCardProps {
 export function WindowCard({ window, onDelete, viewMode = 'grid' }: WindowCardProps) {
   const [isHovered, setIsHovered] = useState(false)
   const [terminalCursor, setTerminalCursor] = useState(true)
+  const [terminalOutput, setTerminalOutput] = useState<string>('')
+  const [isLoadingOutput, setIsLoadingOutput] = useState(false)
   
   const hasChanges = window.gitStats.hasUncommittedChanges
   const totalAdded = window.gitStats.staged + window.gitStats.unstaged
   const totalDeleted = window.gitStats.untracked // Simplified for mockup matching
   const totalModified = window.gitStats.unstaged
   
-  // Simulate some terminal output for the preview (only for grid view)
-  const terminalPreview = [
-    `$ claude-code ${window.projectName}/${window.featureName}`,
+  // Fetch real terminal output
+  useEffect(() => {
+    const fetchTerminalOutput = async () => {
+      if (viewMode !== 'grid') return // Only fetch for grid view
+      
+      setIsLoadingOutput(true)
+      try {
+        const response = await fetch(
+          `/api/windows/${encodeURIComponent(window.projectName)}/${encodeURIComponent(window.featureName)}/output?lines=8&format=text`,
+          { cache: 'no-cache' }
+        )
+        
+        if (response.ok) {
+          const output = await response.text()
+          setTerminalOutput(output.trim())
+        } else {
+          // Fallback to mock data if API fails
+          setTerminalOutput('')
+        }
+      } catch (error) {
+        console.warn('Failed to fetch terminal output:', error)
+        setTerminalOutput('')
+      } finally {
+        setIsLoadingOutput(false)
+      }
+    }
+    
+    fetchTerminalOutput()
+    
+    // Refresh terminal output every 3 seconds when hovered
+    const interval = isHovered ? setInterval(fetchTerminalOutput, 3000) : null
+    return () => {
+      if (interval) clearInterval(interval)
+    }
+  }, [window.projectName, window.featureName, viewMode, isHovered])
+  
+  // Fallback to mock data if no real terminal output
+  const mockTerminalPreview = [
+    `$ export $(cat .env | xargs) && claude --dangerously-skip-permissions`,
+    `$ cd ${window.worktreePath}`,
     `Analyzing authentication flow...`,
     hasChanges ? '✓ Added refresh token generation' : '✓ All tests passing',
     hasChanges ? '✓ Implemented token rotation' : '✓ Bundle size reduced by 23%',
@@ -28,7 +67,12 @@ export function WindowCard({ window, onDelete, viewMode = 'grid' }: WindowCardPr
     hasChanges 
       ? `$ git commit -m "Add ${window.featureName.replace('-', ' ')} support"` 
       : '✓ Implemented React.memo'
-  ].slice(0, viewMode === 'grid' ? 7 : 4)
+  ].slice(0, viewMode === 'grid' ? 8 : 4)
+  
+  // Use real terminal output if available, otherwise use mock
+  const terminalPreview = terminalOutput 
+    ? terminalOutput.split('\n').slice(-8).filter(line => line.trim()) 
+    : mockTerminalPreview
 
   // List view compact layout
   if (viewMode === 'list') {
@@ -214,12 +258,50 @@ export function WindowCard({ window, onDelete, viewMode = 'grid' }: WindowCardPr
               type="text"
               placeholder="$ tmux send-keys -t ${window.projectName}:${window.featureName}"
               className="w-full px-3 py-2 bg-background/50 border border-border text-foreground placeholder-muted/60 rounded text-sm font-mono focus:outline-none focus:border-accent/50 focus:bg-background/80 transition-all duration-200"
-              onKeyDown={(e) => {
+              onKeyDown={async (e) => {
                 if (e.key === 'Enter') {
-                  // TODO: Handle command execution
-                  const command = e.currentTarget.value;
-                  console.log(`Executing: ${command}`);
-                  e.currentTarget.value = '';
+                  const inputElement = e.currentTarget; // Store reference before async operation
+                  const command = inputElement.value.trim();
+                  if (!command) return;
+                  
+                  try {
+                    const response = await fetch(
+                      `/api/windows/${encodeURIComponent(window.projectName)}/${encodeURIComponent(window.featureName)}/command`,
+                      {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ command }),
+                      }
+                    );
+
+                    if (response.ok) {
+                      console.log(`✓ Command sent: ${command}`);
+                      // Clear the input field
+                      inputElement.value = '';
+                      // Optional: Give visual feedback
+                      inputElement.style.borderColor = '#10b981';
+                      setTimeout(() => {
+                        inputElement.style.borderColor = '';
+                      }, 1000);
+                    } else {
+                      const error = await response.json();
+                      console.error(`✗ Command failed: ${error.error || 'Unknown error'}`);
+                      // Give error visual feedback
+                      inputElement.style.borderColor = '#ef4444';
+                      setTimeout(() => {
+                        inputElement.style.borderColor = '';
+                      }, 2000);
+                    }
+                  } catch (error) {
+                    console.error(`✗ Failed to send command: ${error}`);
+                    // Give error visual feedback even on network errors
+                    inputElement.style.borderColor = '#ef4444';
+                    setTimeout(() => {
+                      inputElement.style.borderColor = '';
+                    }, 2000);
+                  }
                 }
               }}
             />

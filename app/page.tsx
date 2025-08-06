@@ -70,7 +70,7 @@ export default function HomePage() {
       setIsCreating(true)
       showInfo('Creating new window...', {
         message: 'Setting up tmux environment and git worktree',
-        command: `tmux new-window -t claude-tmux-manager -n "${request.projectPath.split('/').pop()}:${request.featureName}"`
+        command: `tmux new-window -t claude-tmux-manager -n "${request.projectPath.split('/').pop()}:${request.featureName}" && export $(cat .env | xargs) && claude --dangerously-skip-permissions`
       })
       
               const response = await fetch('/api/windows', {
@@ -369,8 +369,8 @@ export default function HomePage() {
               <div className={`
                 ${viewMode === 'grid' 
                   ? `grid gap-3 grid-cols-1 ${sidebarCollapsed 
-                    ? 'md:grid-cols-2 lg:grid-cols-3' 
-                    : 'md:grid-cols-2 lg:grid-cols-3'
+                    ? 'md:grid-cols-2 lg:grid-cols-2' 
+                    : 'md:grid-cols-2 lg:grid-cols-2'
                   }`
                   : 'space-y-1'
                 }

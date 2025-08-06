@@ -46,7 +46,7 @@ const ASCII_ART = {
 const TERMINAL_TIPS = [
       '$ tmux new-window -t claude-tmux-manager -n "my-feature"',
   '$ git worktree add ../feature-branch',
-  '$ claude --enhance --project ./src',
+  '$ export $(cat .env | xargs) && claude --dangerously-skip-permissions',
   '$ git checkout -b feature/awesome-feature',
   '$ pnpm dev -- --experimental'
 ]

@@ -4,6 +4,7 @@ import type { GitStats } from '@/types'
 import { CommandExecutor } from '../command-executor'
 import { GitError, ValidationError } from '../errors'
 import { logger } from '../logger'
+import { expandPath } from '../utils'
 
 const GIT_COMMAND_TIMEOUT = 30000 // 30 seconds for git operations
 const WORKTREE_DIR = '.worktrees'
@@ -97,9 +98,10 @@ export class GitAdapter {
    * Get the current git branch
    */
   private async getCurrentBranch(repoPath: string): Promise<string> {
+    const expandedPath = expandPath(repoPath)
     const result = await CommandExecutor.execute(
       'git rev-parse --abbrev-ref HEAD',
-      { cwd: repoPath, timeout: 5000 }
+      { cwd: expandedPath, timeout: 5000 }
     )
     
     const branch = result.stdout.trim()
@@ -116,9 +118,10 @@ export class GitAdapter {
   private async getRemoteStatus(repoPath: string): Promise<{ ahead: number; behind: number }> {
     try {
       // First check if we have a remote tracking branch
+      const expandedPath = expandPath(repoPath)
       const trackingResult = await CommandExecutor.execute(
         'git rev-parse --abbrev-ref @{upstream}',
-        { cwd: repoPath, timeout: 5000, suppressErrors: true }
+        { cwd: expandedPath, timeout: 5000, suppressErrors: true }
       )
       
       if (trackingResult.exitCode !== 0) {
@@ -131,7 +134,7 @@ export class GitAdapter {
       // Get ahead/behind counts
       const countResult = await CommandExecutor.execute(
         `git rev-list --left-right --count ${CommandExecutor.escapeShellArg(upstream)}...HEAD`,
-        { cwd: repoPath, timeout: 10000 }
+        { cwd: expandedPath, timeout: 10000 }
       )
       
       const [behindStr, aheadStr] = countResult.stdout.trim().split('\t')
@@ -149,9 +152,10 @@ export class GitAdapter {
    * Get file status counts (staged, unstaged, untracked)
    */
   private async getFileStatus(repoPath: string): Promise<{ staged: number; unstaged: number; untracked: number }> {
+    const expandedPath = expandPath(repoPath)
     const result = await CommandExecutor.execute(
       'git status --porcelain=v1',
-      { cwd: repoPath, timeout: 10000 }
+      { cwd: expandedPath, timeout: 10000 }
     )
 
     let staged = 0
@@ -191,7 +195,9 @@ export class GitAdapter {
     this.validatePath(projectPath)
     this.validateFeatureName(featureName)
     
-    const worktreePath = path.join(projectPath, WORKTREE_DIR, featureName)
+    // Expand path early to handle tilde notation
+    const expandedProjectPath = expandPath(projectPath)
+    const worktreePath = path.join(expandedProjectPath, WORKTREE_DIR, featureName)
     const branchName = `${BRANCH_PREFIX}${featureName}`
 
     try {
@@ -205,14 +211,14 @@ export class GitAdapter {
       await this.validateBranchDoesNotExist(projectPath, branchName)
       
       // Ensure worktrees directory exists
-      const worktreesDir = path.join(projectPath, WORKTREE_DIR)
+      const worktreesDir = path.join(expandedProjectPath, WORKTREE_DIR)
       await this.ensureDirectory(worktreesDir)
       
       // Create the worktree and branch
       const command = `git worktree add ${CommandExecutor.escapeShellArg(worktreePath)} -b ${CommandExecutor.escapeShellArg(branchName)}`
       
       await CommandExecutor.execute(command, {
-        cwd: projectPath,
+        cwd: expandedProjectPath,
         timeout: GIT_COMMAND_TIMEOUT
       })
       
@@ -260,7 +266,8 @@ export class GitAdapter {
     this.validatePath(projectPath)
     this.validateFeatureName(featureName)
     
-    const worktreePath = path.join(projectPath, WORKTREE_DIR, featureName)
+    const expandedProjectPath = expandPath(projectPath)
+    const worktreePath = path.join(expandedProjectPath, WORKTREE_DIR, featureName)
     const branchName = `${BRANCH_PREFIX}${featureName}`
 
     try {
@@ -274,7 +281,7 @@ export class GitAdapter {
         const removeCommand = `git worktree remove ${CommandExecutor.escapeShellArg(worktreePath)}`
         
         const removeResult = await CommandExecutor.execute(removeCommand, {
-          cwd: projectPath,
+          cwd: expandedProjectPath,
           timeout: GIT_COMMAND_TIMEOUT,
           suppressErrors: true
         })
@@ -288,7 +295,7 @@ export class GitAdapter {
           // Try force removal
           const forceCommand = `git worktree remove --force ${CommandExecutor.escapeShellArg(worktreePath)}`
           await CommandExecutor.execute(forceCommand, {
-            cwd: projectPath,
+            cwd: expandedProjectPath,
             timeout: GIT_COMMAND_TIMEOUT
           })
         }
@@ -358,12 +365,15 @@ export class GitAdapter {
         untracked: status.untracked
       })
       
+      // Expand path once for use throughout the method
+      const expandedWorktreePath = expandPath(worktreePath)
+      
       // Stash any tracked changes (staged + unstaged)
       if (status.staged > 0 || status.unstaged > 0) {
         const stashResult = await CommandExecutor.execute(
           'git stash push --include-untracked -m "Auto-stash before session deletion"',
           {
-            cwd: worktreePath,
+            cwd: expandedWorktreePath,
             timeout: GIT_COMMAND_TIMEOUT,
             suppressErrors: true
           }
@@ -381,7 +391,7 @@ export class GitAdapter {
           await CommandExecutor.execute(
             'git reset HEAD .',
             {
-              cwd: worktreePath,
+              cwd: expandedWorktreePath,
               timeout: GIT_COMMAND_TIMEOUT,
               suppressErrors: true
             }
@@ -391,7 +401,7 @@ export class GitAdapter {
           await CommandExecutor.execute(
             'git checkout -- .',
             {
-              cwd: worktreePath,
+              cwd: expandedWorktreePath,
               timeout: GIT_COMMAND_TIMEOUT,
               suppressErrors: true
             }
@@ -404,7 +414,7 @@ export class GitAdapter {
         await CommandExecutor.execute(
           'git clean -fd',
           {
-            cwd: worktreePath,
+            cwd: expandedWorktreePath,
             timeout: GIT_COMMAND_TIMEOUT,
             suppressErrors: true
           }
@@ -473,10 +483,11 @@ export class GitAdapter {
    * Ensure we're working with a git repository
    */
   private async ensureGitRepository(repoPath: string): Promise<void> {
+    const expandedPath = expandPath(repoPath)
     const result = await CommandExecutor.execute(
       'git rev-parse --git-dir',
       {
-        cwd: repoPath,
+        cwd: expandedPath,
         timeout: 5000,
         suppressErrors: true
       }
@@ -484,10 +495,10 @@ export class GitAdapter {
     
     if (result.exitCode !== 0) {
       throw new GitError(
-        `Directory is not a git repository: ${repoPath}`,
+        `Directory is not a git repository: ${expandedPath} (original: ${repoPath})`,
         'git rev-parse --git-dir',
         result.exitCode,
-        repoPath
+        expandedPath
       )
     }
   }
@@ -496,7 +507,8 @@ export class GitAdapter {
    * Validate that a worktree doesn't already exist
    */
   private async validateWorktreeDoesNotExist(projectPath: string, featureName: string): Promise<void> {
-    const worktreePath = path.join(projectPath, WORKTREE_DIR, featureName)
+    const expandedProjectPath = expandPath(projectPath)
+    const worktreePath = path.join(expandedProjectPath, WORKTREE_DIR, featureName)
     
     try {
       await fs.access(worktreePath)
@@ -519,10 +531,11 @@ export class GitAdapter {
    * Validate that a branch doesn't already exist
    */
   private async validateBranchDoesNotExist(projectPath: string, branchName: string): Promise<void> {
+    const expandedProjectPath = expandPath(projectPath)
     const result = await CommandExecutor.execute(
       `git show-ref --verify --quiet refs/heads/${CommandExecutor.escapeShellArg(branchName)}`,
       {
-        cwd: projectPath,
+        cwd: expandedProjectPath,
         timeout: 5000,
         suppressErrors: true
       }
@@ -557,20 +570,21 @@ export class GitAdapter {
    * Verify that a worktree was created successfully
    */
   private async verifyWorktreeExists(worktreePath: string): Promise<void> {
+    const expandedWorktreePath = expandPath(worktreePath)
     try {
-      await fs.access(worktreePath)
+      await fs.access(expandedWorktreePath)
       
       // Also verify it's a valid git worktree
       await CommandExecutor.execute(
         'git rev-parse --git-dir',
         {
-          cwd: worktreePath,
+          cwd: expandedWorktreePath,
           timeout: 5000
         }
       )
     } catch (error) {
       throw new GitError(
-        `Failed to verify worktree creation: ${worktreePath}`,
+        `Failed to verify worktree creation: ${expandedWorktreePath} (original: ${worktreePath})`,
         'verification',
         (error as any)?.code
       )
@@ -582,7 +596,8 @@ export class GitAdapter {
    */
   private async worktreeExists(worktreePath: string): Promise<boolean> {
     try {
-      await fs.access(worktreePath)
+      const expandedWorktreePath = expandPath(worktreePath)
+      await fs.access(expandedWorktreePath)
       return true
     } catch {
       return false
@@ -599,12 +614,13 @@ export class GitAdapter {
   ): Promise<void> {
     try {
       // Try to remove the worktree if it exists
+      const expandedProjectPath = expandPath(projectPath)
       const exists = await this.worktreeExists(worktreePath)
       if (exists) {
         await CommandExecutor.execute(
           `git worktree remove --force ${CommandExecutor.escapeShellArg(worktreePath)}`,
           {
-            cwd: projectPath,
+            cwd: expandedProjectPath,
             timeout: GIT_COMMAND_TIMEOUT,
             suppressErrors: true
           }
@@ -615,7 +631,7 @@ export class GitAdapter {
       await CommandExecutor.execute(
         `git branch -D ${CommandExecutor.escapeShellArg(branchName)}`,
         {
-          cwd: projectPath,
+          cwd: expandedProjectPath,
           timeout: 5000,
           suppressErrors: true
         }
@@ -629,10 +645,11 @@ export class GitAdapter {
    * Clean up a local branch
    */
   private async cleanupBranch(projectPath: string, branchName: string): Promise<void> {
+    const expandedProjectPath = expandPath(projectPath)
     const result = await CommandExecutor.execute(
       `git branch -D ${CommandExecutor.escapeShellArg(branchName)}`,
       {
-        cwd: projectPath,
+        cwd: expandedProjectPath,
         timeout: 5000,
         suppressErrors: true
       }
@@ -653,10 +670,11 @@ export class GitAdapter {
    */
   private async cleanupRemoteBranch(projectPath: string, branchName: string): Promise<void> {
     // Check if there's a remote tracking branch
+    const expandedProjectPath = expandPath(projectPath)
     const remoteResult = await CommandExecutor.execute(
       `git ls-remote --heads origin ${CommandExecutor.escapeShellArg(branchName)}`,
       {
-        cwd: projectPath,
+        cwd: expandedProjectPath,
         timeout: 10000,
         suppressErrors: true
       }
@@ -695,15 +713,16 @@ export class GitAdapter {
     try {
       await this.ensureGitRepository(repoPath)
       
+      const expandedRepoPath = expandPath(repoPath)
       const [branch, remoteUrl, worktreesOutput] = await Promise.all([
         this.getCurrentBranch(repoPath),
         CommandExecutor.execute(
           'git config --get remote.origin.url',
-          { cwd: repoPath, timeout: 5000, suppressErrors: true }
+          { cwd: expandedRepoPath, timeout: 5000, suppressErrors: true }
         ),
         CommandExecutor.execute(
           'git worktree list --porcelain',
-          { cwd: repoPath, timeout: 10000, suppressErrors: true }
+          { cwd: expandedRepoPath, timeout: 10000, suppressErrors: true }
         )
       ])
       

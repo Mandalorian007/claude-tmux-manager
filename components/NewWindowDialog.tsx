@@ -38,9 +38,9 @@ export function NewWindowDialog({
   useEffect(() => {
     if (projectPath && featureName) {
       const projectName = projectPath.split('/').pop() || 'project'
-      setPreviewCommand(`tmux new-window -t claude-tmux-manager -n "${projectName}:${featureName}" -c "${projectPath}"`)
+      setPreviewCommand(`tmux new-window -t claude-tmux-manager -n "${projectName}:${featureName}" -c "${projectPath}" \\; send-keys "export $(cat .env | xargs) && claude --dangerously-skip-permissions" Enter`)
     } else {
-      setPreviewCommand('tmux new-window -t claude-tmux-manager -n "project:feature" -c "/path/to/project"')
+      setPreviewCommand('tmux new-window -t claude-tmux-manager -n "project:feature" -c "/path/to/project" \\; send-keys "export $(cat .env | xargs) && claude --dangerously-skip-permissions" Enter')
     }
   }, [projectPath, featureName])
 
@@ -67,7 +67,21 @@ export function NewWindowDialog({
 
   const handleProjectPathValidation = (path: string) => {
     setProjectPath(path)
-    // You could add path validation logic here
+    // Store recent paths in localStorage
+    if (path.trim() && path.length > 5) {
+      const recentPaths = JSON.parse(localStorage.getItem('claude-tmux-recent-paths') || '[]')
+      const updatedPaths = [path, ...recentPaths.filter((p: string) => p !== path)].slice(0, 5)
+      localStorage.setItem('claude-tmux-recent-paths', JSON.stringify(updatedPaths))
+    }
+  }
+
+  // Get recent paths from localStorage
+  const getRecentPaths = (): string[] => {
+    try {
+      return JSON.parse(localStorage.getItem('claude-tmux-recent-paths') || '[]')
+    } catch {
+      return []
+    }
   }
 
   if (!isOpen) return null
@@ -114,20 +128,65 @@ export function NewWindowDialog({
             <label className="block text-sm font-medium text-foreground mb-2">
               Project Path
             </label>
-            <div className="relative">
-              <input
-                type="text"
-                value={projectPath}
-                onChange={(e) => handleProjectPathValidation(e.target.value)}
-                placeholder="/path/to/your/project"
-                className="w-full pl-10 pr-3 py-3 bg-background border border-border rounded-lg text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
-                required
-                disabled={isLoading}
-              />
-              <FolderOpen className="absolute left-3 top-3.5 w-4 h-4 text-muted" />
+            <div className="space-y-2">
+              <div className="relative">
+                <input
+                  type="text"
+                  value={projectPath}
+                  onChange={(e) => handleProjectPathValidation(e.target.value)}
+                  placeholder="~/IdeaProjects/my-project"
+                  className="w-full pl-10 pr-3 py-3 bg-background border border-border rounded-lg text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
+                  required
+                  disabled={isLoading}
+                />
+                <FolderOpen className="absolute left-3 top-3.5 w-4 h-4 text-muted" />
+              </div>
+              
+              {/* Quick Path Shortcuts */}
+              <div className="space-y-2">
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { label: "~/IdeaProjects/", path: "~/IdeaProjects/" },
+                    { label: "~/Projects/", path: "~/Projects/" },
+                    { label: "~/Code/", path: "~/Code/" },
+                    { label: "~/Development/", path: "~/Development/" }
+                  ].map((shortcut) => (
+                    <button
+                      key={shortcut.path}
+                      type="button"
+                      onClick={() => setProjectPath(shortcut.path)}
+                      className="px-2 py-1 text-xs bg-secondary/50 text-muted hover:bg-secondary hover:text-foreground rounded border border-border/50 hover:border-accent/30 transition-all"
+                      disabled={isLoading}
+                    >
+                      {shortcut.label}
+                    </button>
+                  ))}
+                </div>
+                
+                {/* Recent Paths */}
+                {getRecentPaths().length > 0 && (
+                  <div className="space-y-1">
+                    <div className="text-xs text-muted">Recent paths:</div>
+                    <div className="flex flex-wrap gap-1">
+                      {getRecentPaths().slice(0, 3).map((recentPath, index) => (
+                        <button
+                          key={index}
+                          type="button"
+                          onClick={() => setProjectPath(recentPath)}
+                          className="px-2 py-1 text-xs bg-accent/10 text-accent hover:bg-accent/20 rounded border border-accent/30 transition-all truncate max-w-[200px]"
+                          disabled={isLoading}
+                          title={recentPath}
+                        >
+                          {recentPath.length > 25 ? `...${recentPath.slice(-22)}` : recentPath}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
             <p className="text-xs text-muted mt-1.5">
-              Path to the git repository root directory
+              Path to the git repository root directory. Click shortcuts above or type manually.
             </p>
           </div>
 

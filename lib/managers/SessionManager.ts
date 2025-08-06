@@ -624,6 +624,45 @@ export class SessionManager {
   }
 
   /**
+   * Send a command to an existing session's tmux window
+   */
+  async sendCommand(projectName: string, featureName: string, command: string): Promise<void> {
+    this.logger.debug('Sending command to session', { projectName, featureName, command })
+
+    // Validate inputs
+    if (!projectName || !featureName || !command) {
+      throw new SessionError('Project name, feature name, and command are required')
+    }
+
+    // Generate window name in consistent format
+    const windowName = `${projectName}:${featureName}`
+
+    try {
+      // Send command via tmux adapter
+      await tmuxAdapter.sendCommand(windowName, command)
+      
+      this.logger.info('Successfully sent command to session', { 
+        projectName, 
+        featureName, 
+        command,
+        windowName 
+      })
+    } catch (error) {
+      this.logger.error('Failed to send command to session', error, { 
+        projectName, 
+        featureName, 
+        command 
+      })
+      
+      if (error instanceof TmuxError) {
+        throw new SessionError(`Failed to send command: ${error.message}`)
+      }
+      
+      throw new SessionError(`Failed to send command to session ${projectName}:${featureName}: ${(error as Error).message}`)
+    }
+  }
+
+  /**
    * Delete a session with comprehensive cleanup and error handling
    */
   async deleteSession(projectName: string, featureName: string): Promise<void> {
