@@ -1,0 +1,113 @@
+/**
+ * Simplified SessionManager test to debug core issues
+ */
+
+// Mock all external dependencies with simple implementations BEFORE importing SessionManager
+jest.mock('@/lib/adapters/tmux', () => ({
+  tmuxAdapter: {
+    ensureSession: jest.fn().mockResolvedValue(undefined),
+    listWindows: jest.fn().mockResolvedValue([]), // Make sure this returns an empty array
+    createWindow: jest.fn(),
+    deleteWindow: jest.fn(),
+    capturePane: jest.fn().mockResolvedValue('test output'),
+  },
+}))
+
+jest.mock('@/lib/adapters/git', () => ({
+  gitAdapter: {
+    getStatus: jest.fn().mockResolvedValue({
+      branch: 'test-branch',
+      ahead: 0,
+      behind: 0,
+      staged: 0,
+      unstaged: 0,
+      untracked: 0,
+      hasUncommittedChanges: false,
+    }),
+    getProjectName: jest.fn().mockReturnValue('test-project'),
+    createWorktree: jest.fn(),
+    deleteWorktree: jest.fn(),
+  },
+}))
+
+jest.mock('fs/promises', () => ({
+  stat: jest.fn().mockResolvedValue({ isDirectory: () => true }),
+  lstat: jest.fn().mockResolvedValue({ isSymbolicLink: () => false }),
+  access: jest.fn().mockResolvedValue(undefined),
+}))
+
+jest.mock('@/lib/logger', () => ({
+  logger: {
+    createChild: () => ({
+      debug: jest.fn(),
+      info: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn(),
+    }),
+  },
+}))
+
+jest.mock('@/lib/command-executor', () => ({
+  CommandExecutor: {
+    execute: jest.fn(),
+  },
+}))
+
+jest.mock('@/lib/utils/session-utils', () => ({
+  SessionStatusAnalyzer: {
+    determineStatus: jest.fn().mockReturnValue('active'),
+  },
+  PathValidator: {
+    validatePath: jest.fn(),
+  },
+  SessionSearchUtil: {
+    filterSessions: jest.fn((sessions) => sessions), // Just return the sessions unchanged
+  },
+  SessionSafetyValidator: {
+    validateCreationParams: jest.fn().mockReturnValue({ valid: true, errors: [], warnings: [] }),
+  },
+  SessionPerformanceMonitor: {
+    timeOperation: jest.fn().mockImplementation(async (name, fn) => {
+      console.log(`timeOperation called with: ${name}`)
+      const result = await fn()
+      console.log(`timeOperation result:`, result)
+      return result
+    }),
+    getAllMetrics: jest.fn().mockReturnValue({}),
+  },
+}))
+
+// Import SessionManager AFTER all mocks are set up
+import { SessionManager } from '@/lib/managers/SessionManager'
+
+describe('SessionManager Simple Test', () => {
+  let sessionManager: SessionManager
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    sessionManager = new SessionManager()
+  })
+
+  it('should return empty array for listSessions with no windows', async () => {
+    console.log('Calling listSessions...')
+    
+    try {
+      const sessions = await sessionManager.listSessions()
+      
+      console.log('Sessions result:', sessions)
+      console.log('Sessions type:', typeof sessions)
+      
+      if (sessions === undefined) {
+        console.log('Sessions is undefined!')
+        // Let's check if the method exists and is callable
+        console.log('listSessions method exists:', typeof sessionManager.listSessions)
+        console.log('SessionManager:', sessionManager)
+      }
+      
+      expect(sessions).toEqual([])
+    } catch (error) {
+      console.log('Error calling listSessions:', error)
+      throw error
+    }
+  })
+})

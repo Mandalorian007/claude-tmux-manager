@@ -1,0 +1,121 @@
+/**
+ * Working SessionManager test with proper mocking
+ */
+
+// All mocks MUST be defined before any imports
+jest.mock('@/lib/adapters/tmux', () => ({
+  tmuxAdapter: {
+    ensureSession: jest.fn().mockResolvedValue(undefined),
+    listWindows: jest.fn().mockResolvedValue([]),
+    createWindow: jest.fn().mockResolvedValue(undefined),
+    deleteWindow: jest.fn().mockResolvedValue(undefined),
+    capturePane: jest.fn().mockResolvedValue('test output'),
+    clearCache: jest.fn(),
+  },
+}))
+
+jest.mock('@/lib/adapters/git', () => ({
+  gitAdapter: {
+    getStatus: jest.fn().mockResolvedValue({
+      branch: 'test-branch',
+      ahead: 0,
+      behind: 0,
+      staged: 0,
+      unstaged: 0,
+      untracked: 0,
+      hasUncommittedChanges: false,
+    }),
+    getProjectName: jest.fn().mockReturnValue('test-project'),
+    createWorktree: jest.fn().mockResolvedValue(undefined),
+    deleteWorktree: jest.fn().mockResolvedValue(undefined),
+  },
+}))
+
+jest.mock('@/lib/utils/session-utils', () => ({
+  SessionStatusAnalyzer: {
+    determineStatus: jest.fn().mockReturnValue('active'),
+  },
+  PathValidator: {
+    validatePath: jest.fn(),
+  },
+  SessionSearchUtil: {
+    filterSessions: jest.fn((sessions) => sessions),
+  },
+  SessionSafetyValidator: {
+    validateCreationParams: jest.fn().mockReturnValue({ valid: true, errors: [], warnings: [] }),
+  },
+  SessionPerformanceMonitor: {
+    timeOperation: jest.fn().mockImplementation(async (name, fn) => await fn()),
+    getAllMetrics: jest.fn().mockReturnValue({}),
+  },
+}))
+
+jest.mock('@/lib/logger', () => ({
+  logger: {
+    createChild: () => ({
+      debug: jest.fn(),
+      info: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn(),
+    }),
+  },
+}))
+
+jest.mock('fs/promises', () => ({
+  stat: jest.fn().mockResolvedValue({ isDirectory: () => true }),
+  lstat: jest.fn().mockResolvedValue({ isSymbolicLink: () => false }),
+  access: jest.fn().mockResolvedValue(undefined),
+}))
+
+jest.mock('@/lib/command-executor', () => ({
+  CommandExecutor: {
+    execute: jest.fn(),
+  },
+}))
+
+// Now import everything after mocks are set up
+import { SessionManager } from '@/lib/managers/SessionManager'
+import { tmuxAdapter } from '@/lib/adapters/tmux'
+import { gitAdapter } from '@/lib/adapters/git'
+
+// Cast to mocked types
+const mockTmuxAdapter = tmuxAdapter as jest.Mocked<typeof tmuxAdapter>
+const mockGitAdapter = gitAdapter as jest.Mocked<typeof gitAdapter>
+
+describe('SessionManager Working Test', () => {
+  let sessionManager: SessionManager
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    sessionManager = new SessionManager()
+  })
+
+  it('should return empty array for listSessions with no windows', async () => {
+    const sessions = await sessionManager.listSessions()
+    
+    expect(sessions).toEqual([])
+    expect(mockTmuxAdapter.ensureSession).toHaveBeenCalled()
+    expect(mockTmuxAdapter.listWindows).toHaveBeenCalled()
+  })
+
+  it('should process valid window sessions', async () => {
+    const mockWindows = [
+      {
+        name: 'project1:feature1',
+        panePath: '/test/project1/.worktrees/feature1',
+      }
+    ]
+    
+    mockTmuxAdapter.listWindows.mockResolvedValue(mockWindows)
+    
+    const sessions = await sessionManager.listSessions()
+    
+    expect(sessions).toHaveLength(1)
+    expect(sessions[0]).toMatchObject({
+      projectName: 'project1',
+      featureName: 'feature1',
+      branch: 'feature/feature1',
+      isActive: true,
+    })
+  })
+})

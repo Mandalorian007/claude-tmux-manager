@@ -1,0 +1,694 @@
+/**
+ * Comprehensive tests for the enhanced SessionManager
+ * 
+ * This test suite validates the robust path derivation logic, session lifecycle management,
+ * performance optimizations, advanced features, and error recovery capabilities.
+ */
+
+import { describe, it, expect, jest, beforeEach, afterEach } from '@jest/globals'
+import { SessionManager } from '../../../lib/managers/SessionManager'
+import { tmuxAdapter } from '../../../lib/adapters/tmux'
+import { gitAdapter } from '../../../lib/adapters/git'
+import type { WindowInfo, GitStats, Session } from '../../../types'
+import fs from 'fs/promises'
+
+// Mock the adapters
+jest.mock('../../../lib/adapters/tmux')
+jest.mock('../../../lib/adapters/git')
+jest.mock('fs/promises')
+
+const mockTmuxAdapter = tmuxAdapter as jest.Mocked<typeof tmuxAdapter>
+const mockGitAdapter = gitAdapter as jest.Mocked<typeof gitAdapter>
+const mockFs = fs as jest.Mocked<typeof fs>
+
+describe('Enhanced SessionManager', () => {
+  let sessionManager: SessionManager
+  
+  beforeEach(() => {
+    sessionManager = new SessionManager()
+    jest.clearAllMocks()
+    
+    // Default successful mocks
+    mockTmuxAdapter.ensureSession.mockResolvedValue(undefined)
+    mockTmuxAdapter.listWindows.mockResolvedValue([])
+    mockGitAdapter.getProjectName.mockReturnValue('test-project')
+  })
+  
+  afterEach(() => {
+    jest.resetAllMocks()
+  })
+
+  describe('Path Derivation Logic', () => {
+    it('should parse valid window names correctly', async () => {
+      const windows: WindowInfo[] = [
+        {
+          name: 'my-backend:user-auth',
+          panePath: '/home/user/projects/my-backend/.worktrees/user-auth'
+        }
+      ]
+      
+      mockTmuxAdapter.listWindows.mockResolvedValue(windows)
+      mockFs.stat.mockImplementation(async (path) => ({
+        isDirectory: () => true,
+        isSymbolicLink: () => false
+      }) as any)
+      mockFs.lstat.mockImplementation(async (path) => ({
+        isSymbolicLink: () => false
+      }) as any)
+      mockFs.access.mockResolvedValue(undefined)
+      
+      const mockGitStats: GitStats = {
+        branch: 'feature/user-auth',
+        ahead: 0,
+        behind: 0,
+        staged: 0,
+        unstaged: 0,
+        untracked: 0,
+        hasUncommittedChanges: false
+      }
+      
+      mockGitAdapter.getStatus.mockResolvedValue(mockGitStats)
+      
+      const sessions = await sessionManager.listSessions()
+      
+      expect(sessions).toHaveLength(1)
+      expect(sessions[0]).toMatchObject({
+        projectName: 'my-backend',
+        featureName: 'user-auth',
+        projectPath: '/home/user/projects/my-backend',
+        worktreePath: '/home/user/projects/my-backend/.worktrees/user-auth',
+        branch: 'feature/user-auth'
+      })
+    })
+    
+    it('should handle invalid window name formats', async () => {
+      const windows: WindowInfo[] = [
+        { name: 'invalid-name-no-colon', panePath: '/some/path' },
+        { name: 'invalid:name:too:many:colons', panePath: '/some/path' },
+        { name: ':empty-project', panePath: '/some/path' },
+        { name: 'empty-feature:', panePath: '/some/path' }
+      ]
+      
+      mockTmuxAdapter.listWindows.mockResolvedValue(windows)
+      
+      const sessions = await sessionManager.listSessions()
+      expect(sessions).toHaveLength(0)
+    })
+    
+    it('should handle non-standard path structures', async () => {
+      const windows: WindowInfo[] = [
+        {
+          name: 'project:feature',
+          panePath: '/path/without/worktrees/structure'
+        }
+      ]
+      
+      mockTmuxAdapter.listWindows.mockResolvedValue(windows)
+      
+      const sessions = await sessionManager.listSessions()
+      expect(sessions).toHaveLength(0)
+    })
+    
+    it('should resolve symlinks in path derivation', async () => {
+      const windows: WindowInfo[] = [
+        {
+          name: 'project:feature',
+          panePath: '/symlink/path/.worktrees/feature'
+        }
+      ]
+      
+      mockTmuxAdapter.listWindows.mockResolvedValue(windows)
+      
+      // Mock symlink resolution
+      mockFs.lstat.mockResolvedValueOnce({
+        isSymbolicLink: () => true
+      } as any)
+      mockFs.readlink.mockResolvedValueOnce('/real/path/.worktrees/feature')
+      mockFs.lstat.mockResolvedValueOnce({
+        isSymbolicLink: () => false
+      } as any)
+      
+      mockFs.stat.mockImplementation(async (path) => ({
+        isDirectory: () => true,
+        isSymbolicLink: () => false
+      }) as any)
+      mockFs.access.mockResolvedValue(undefined)
+      
+      const mockGitStats: GitStats = {
+        branch: 'feature/feature',
+        ahead: 0,
+        behind: 0,
+        staged: 0,
+        unstaged: 0,
+        untracked: 0,
+        hasUncommittedChanges: false
+      }
+      
+      mockGitAdapter.getStatus.mockResolvedValue(mockGitStats)
+      
+      const sessions = await sessionManager.listSessions()
+      
+      expect(sessions).toHaveLength(1)
+      expect(sessions[0].projectPath).toBe('/real/path')
+      expect(sessions[0].worktreePath).toBe('/real/path/.worktrees/feature')
+    })
+  })
+
+  describe('Session Lifecycle Management', () => {
+    it('should create session with comprehensive validation', async () => {
+      const request = {
+        projectPath: '/test/project',
+        featureName: 'test-feature'
+      }
+      
+      // Mock successful validation
+      mockFs.stat.mockResolvedValue({
+        isDirectory: () => true
+      } as any)
+      mockFs.access.mockImplementation(async (path) => {
+        if (path.toString().includes('.worktrees/test-feature')) {
+          throw new Error('ENOENT') // Worktree doesn't exist yet (good)
+        }
+        return Promise.resolve()
+      })
+      
+      mockGitAdapter.createWorktree.mockResolvedValue('/test/project/.worktrees/test-feature')
+      mockTmuxAdapter.createWindow.mockResolvedValue(undefined)
+      
+      const mockGitStats: GitStats = {
+        branch: 'feature/test-feature',
+        ahead: 0,
+        behind: 0,
+        staged: 0,
+        unstaged: 0,
+        untracked: 0,
+        hasUncommittedChanges: false
+      }
+      
+      mockGitAdapter.getStatus.mockResolvedValue(mockGitStats)
+      
+      const result = await sessionManager.createSession(request)
+      
+      expect(result.success).toBe(true)
+      expect(result.data).toBeDefined()
+      expect(result.data?.projectName).toBe('test-project')
+      expect(result.data?.featureName).toBe('test-feature')
+    })
+    
+    it('should handle session creation with existing unhealthy session', async () => {
+      const request = {
+        projectPath: '/test/project',
+        featureName: 'test-feature'
+      }
+      
+      // Mock existing session
+      const existingSession: Session = {
+        projectName: 'test-project',
+        featureName: 'test-feature',
+        projectPath: '/test/project',
+        worktreePath: '/test/project/.worktrees/test-feature',
+        branch: 'feature/test-feature',
+        gitStats: {
+          branch: 'feature/test-feature',
+          ahead: 0,
+          behind: 0,
+          staged: 0,
+          unstaged: 0,
+          untracked: 0,
+          hasUncommittedChanges: false
+        },
+        isActive: true
+      }
+      
+      // Mock validation
+      mockFs.stat.mockResolvedValue({
+        isDirectory: () => true
+      } as any)
+      mockFs.access.mockResolvedValue(undefined)
+      
+      // Mock existing session retrieval
+      const windows: WindowInfo[] = [
+        {
+          name: 'test-project:test-feature',
+          panePath: '/test/project/.worktrees/test-feature'
+        }
+      ]
+      
+      mockTmuxAdapter.listWindows.mockResolvedValue(windows)
+      mockGitAdapter.getStatus.mockResolvedValue(existingSession.gitStats)
+      
+      // Mock unhealthy session (tmux window doesn't exist)
+      mockTmuxAdapter.listWindows
+        .mockResolvedValueOnce(windows) // For initial getSession
+        .mockResolvedValueOnce([]) // For health check (no tmux window)
+      
+      // Mock cleanup
+      mockGitAdapter.rollbackChanges.mockResolvedValue(undefined)
+      mockGitAdapter.removeWorktree.mockResolvedValue(undefined)
+      
+      // Mock successful creation after cleanup
+      mockGitAdapter.createWorktree.mockResolvedValue('/test/project/.worktrees/test-feature')
+      mockTmuxAdapter.createWindow.mockResolvedValue(undefined)
+      
+      const result = await sessionManager.createSession(request)
+      
+      expect(result.success).toBe(true)
+      expect(result.warnings).toContain(expect.stringContaining('Found unhealthy existing session'))
+    })
+    
+    it('should perform rollback on creation failure', async () => {
+      const request = {
+        projectPath: '/test/project',
+        featureName: 'test-feature'
+      }
+      
+      // Mock successful validation and worktree creation
+      mockFs.stat.mockResolvedValue({
+        isDirectory: () => true
+      } as any)
+      mockFs.access.mockImplementation(async (path) => {
+        if (path.toString().includes('.worktrees/test-feature')) {
+          throw new Error('ENOENT')
+        }
+        return Promise.resolve()
+      })
+      
+      mockGitAdapter.createWorktree.mockResolvedValue('/test/project/.worktrees/test-feature')
+      
+      // Mock tmux window creation failure
+      mockTmuxAdapter.createWindow.mockRejectedValue(new Error('Tmux creation failed'))
+      
+      // Mock rollback
+      mockGitAdapter.removeWorktree.mockResolvedValue(undefined)
+      
+      const result = await sessionManager.createSession(request)
+      
+      expect(result.success).toBe(false)
+      expect(result.error).toContain('Failed to create session')
+      expect(mockGitAdapter.removeWorktree).toHaveBeenCalledWith('/test/project', 'test-feature')
+    })
+  })
+
+  describe('Session Health Checks', () => {
+    it('should perform comprehensive health check', async () => {
+      const session: Session = {
+        projectName: 'test-project',
+        featureName: 'test-feature',
+        projectPath: '/test/project',
+        worktreePath: '/test/project/.worktrees/test-feature',
+        branch: 'feature/test-feature',
+        gitStats: {
+          branch: 'feature/test-feature',
+          ahead: 0,
+          behind: 0,
+          staged: 0,
+          unstaged: 0,
+          untracked: 0,
+          hasUncommittedChanges: false
+        },
+        isActive: true
+      }
+      
+      // Mock healthy session
+      const windows: WindowInfo[] = [
+        {
+          name: 'test-project:test-feature',
+          panePath: '/test/project/.worktrees/test-feature'
+        }
+      ]
+      
+      mockTmuxAdapter.listWindows.mockResolvedValue(windows)
+      mockFs.access.mockResolvedValue(undefined)
+      
+      // Mock CommandExecutor for git commands
+      jest.doMock('../../command-executor', () => ({
+        CommandExecutor: {
+          execute: jest.fn()
+            .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' }) // git rev-parse --git-dir
+            .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' }) // git rev-parse --verify HEAD
+        }
+      }))
+      
+      const healthCheck = await (sessionManager as any).performSessionHealthCheck(session)
+      
+      expect(healthCheck.isHealthy).toBe(true)
+      expect(healthCheck.tmuxWindowExists).toBe(true)
+      expect(healthCheck.pathAccessible).toBe(true)
+      expect(healthCheck.issues).toHaveLength(0)
+    })
+    
+    it('should detect unhealthy session', async () => {
+      const session: Session = {
+        projectName: 'test-project',
+        featureName: 'test-feature',
+        projectPath: '/test/project',
+        worktreePath: '/test/project/.worktrees/test-feature',
+        branch: 'feature/test-feature',
+        gitStats: {
+          branch: 'feature/test-feature',
+          ahead: 0,
+          behind: 0,
+          staged: 0,
+          unstaged: 0,
+          untracked: 0,
+          hasUncommittedChanges: false
+        },
+        isActive: true
+      }
+      
+      // Mock unhealthy session (no tmux window)
+      mockTmuxAdapter.listWindows.mockResolvedValue([])
+      mockFs.access.mockRejectedValue(new Error('Path not accessible'))
+      
+      const healthCheck = await (sessionManager as any).performSessionHealthCheck(session)
+      
+      expect(healthCheck.isHealthy).toBe(false)
+      expect(healthCheck.tmuxWindowExists).toBe(false)
+      expect(healthCheck.pathAccessible).toBe(false)
+      expect(healthCheck.issues.length).toBeGreaterThan(0)
+    })
+  })
+
+  describe('Advanced Features', () => {
+    it('should search sessions with text query', async () => {
+      const sessions: Session[] = [
+        {
+          projectName: 'backend-api',
+          featureName: 'user-auth',
+          projectPath: '/test/backend-api',
+          worktreePath: '/test/backend-api/.worktrees/user-auth',
+          branch: 'feature/user-auth',
+          gitStats: {
+            branch: 'feature/user-auth',
+            ahead: 0,
+            behind: 0,
+            staged: 0,
+            unstaged: 0,
+            untracked: 0,
+            hasUncommittedChanges: false
+          },
+          isActive: true
+        },
+        {
+          projectName: 'frontend-app',
+          featureName: 'user-profile',
+          projectPath: '/test/frontend-app',
+          worktreePath: '/test/frontend-app/.worktrees/user-profile',
+          branch: 'feature/user-profile',
+          gitStats: {
+            branch: 'feature/user-profile',
+            ahead: 0,
+            behind: 0,
+            staged: 0,
+            unstaged: 0,
+            untracked: 0,
+            hasUncommittedChanges: false
+          },
+          isActive: true
+        }
+      ]
+      
+      // Mock listSessions to return our test sessions
+      jest.spyOn(sessionManager, 'listSessions').mockResolvedValue(sessions)
+      
+      const results = await sessionManager.searchSessions({
+        text: 'user',
+        sortBy: 'name'
+      })
+      
+      expect(results).toHaveLength(2)
+      expect(results[0].matchScore).toBeGreaterThan(0)
+      expect(results[1].matchScore).toBeGreaterThan(0)
+    })
+    
+    it('should filter sessions by criteria', async () => {
+      const sessions: Session[] = [
+        {
+          projectName: 'project1',
+          featureName: 'feature1',
+          projectPath: '/test/project1',
+          worktreePath: '/test/project1/.worktrees/feature1',
+          branch: 'feature/feature1',
+          gitStats: {
+            branch: 'feature/feature1',
+            ahead: 0,
+            behind: 0,
+            staged: 1,
+            unstaged: 0,
+            untracked: 0,
+            hasUncommittedChanges: true
+          },
+          isActive: true
+        },
+        {
+          projectName: 'project2',
+          featureName: 'feature2',
+          projectPath: '/test/project2',
+          worktreePath: '/test/project2/.worktrees/feature2',
+          branch: 'feature/feature2',
+          gitStats: {
+            branch: 'feature/feature2',
+            ahead: 0,
+            behind: 0,
+            staged: 0,
+            unstaged: 0,
+            untracked: 0,
+            hasUncommittedChanges: false
+          },
+          isActive: true
+        }
+      ]
+      
+      jest.spyOn(sessionManager, 'listSessions').mockResolvedValue(sessions)
+      
+      const results = await sessionManager.listSessions({
+        filter: { hasUncommittedChanges: true }
+      })
+      
+      expect(results).toHaveLength(1)
+      expect(results[0].projectName).toBe('project1')
+    })
+    
+    it('should get session status with correct determination', async () => {
+      const session: Session = {
+        projectName: 'test-project',
+        featureName: 'test-feature',
+        projectPath: '/test/project',
+        worktreePath: '/test/project/.worktrees/test-feature',
+        branch: 'feature/test-feature',
+        gitStats: {
+          branch: 'feature/test-feature',
+          ahead: 2,
+          behind: 0,
+          staged: 0,
+          unstaged: 0,
+          untracked: 0,
+          hasUncommittedChanges: false
+        },
+        isActive: true
+      }
+      
+      jest.spyOn(sessionManager, 'getSession').mockResolvedValue(session)
+      jest.spyOn(sessionManager as any, 'performSessionHealthCheck').mockResolvedValue({
+        isHealthy: true,
+        issues: [],
+        tmuxWindowExists: true,
+        gitWorktreeValid: true,
+        pathAccessible: true,
+        branchValid: true
+      })
+      jest.spyOn(sessionManager as any, 'collectSessionMetadata').mockResolvedValue({
+        lastActivity: new Date()
+      })
+      
+      const status = await sessionManager.getSessionStatus('test-project', 'test-feature')
+      
+      expect(status.exists).toBe(true)
+      expect(status.isHealthy).toBe(true)
+      expect(status.status).toBe('ready-for-pr') // ahead > 0 and no uncommitted changes
+    })
+  })
+
+  describe('Performance Optimizations', () => {
+    it('should use caching effectively', async () => {
+      const windows: WindowInfo[] = [
+        {
+          name: 'project:feature',
+          panePath: '/test/project/.worktrees/feature'
+        }
+      ]
+      
+      mockTmuxAdapter.listWindows.mockResolvedValue(windows)
+      mockFs.stat.mockResolvedValue({
+        isDirectory: () => true
+      } as any)
+      mockFs.lstat.mockResolvedValue({
+        isSymbolicLink: () => false
+      } as any)
+      mockFs.access.mockResolvedValue(undefined)
+      mockGitAdapter.getStatus.mockResolvedValue({
+        branch: 'feature/feature',
+        ahead: 0,
+        behind: 0,
+        staged: 0,
+        unstaged: 0,
+        untracked: 0,
+        hasUncommittedChanges: false
+      })
+      
+      // First call should hit adapters
+      await sessionManager.listSessions({ useCache: true })
+      
+      // Second call should use cache
+      await sessionManager.listSessions({ useCache: true })
+      
+      // Should only call tmux adapter once due to caching
+      expect(mockTmuxAdapter.listWindows).toHaveBeenCalledTimes(1)
+    })
+    
+    it('should process sessions concurrently', async () => {
+      const windows: WindowInfo[] = Array.from({ length: 10 }, (_, i) => ({
+        name: `project${i}:feature${i}`,
+        panePath: `/test/project${i}/.worktrees/feature${i}`
+      }))
+      
+      mockTmuxAdapter.listWindows.mockResolvedValue(windows)
+      mockFs.stat.mockResolvedValue({
+        isDirectory: () => true
+      } as any)
+      mockFs.lstat.mockResolvedValue({
+        isSymbolicLink: () => false
+      } as any)
+      mockFs.access.mockResolvedValue(undefined)
+      mockGitAdapter.getStatus.mockResolvedValue({
+        branch: 'feature/test',
+        ahead: 0,
+        behind: 0,
+        staged: 0,
+        unstaged: 0,
+        untracked: 0,
+        hasUncommittedChanges: false
+      })
+      
+      const startTime = Date.now()
+      const sessions = await sessionManager.listSessions({ useCache: false })
+      const endTime = Date.now()
+      
+      expect(sessions).toHaveLength(10)
+      // With concurrent processing, this should be much faster than sequential
+      expect(endTime - startTime).toBeLessThan(1000) // Reasonable time for concurrent processing
+    })
+  })
+
+  describe('Error Recovery', () => {
+    it('should handle partial session deletion gracefully', async () => {
+      mockGitAdapter.rollbackChanges.mockResolvedValue(undefined)
+      mockGitAdapter.removeWorktree.mockRejectedValue(new Error('Git removal failed'))
+      mockTmuxAdapter.killWindow.mockResolvedValue(undefined)
+      
+      // Mock existing session
+      const session: Session = {
+        projectName: 'test-project',
+        featureName: 'test-feature',
+        projectPath: '/test/project',
+        worktreePath: '/test/project/.worktrees/test-feature',
+        branch: 'feature/test-feature',
+        gitStats: {
+          branch: 'feature/test-feature',
+          ahead: 0,
+          behind: 0,
+          staged: 0,
+          unstaged: 0,
+          untracked: 0,
+          hasUncommittedChanges: false
+        },
+        isActive: true
+      }
+      
+      jest.spyOn(sessionManager, 'getSession').mockResolvedValue(session)
+      jest.spyOn(sessionManager as any, 'performSessionHealthCheck').mockResolvedValue({
+        isHealthy: true,
+        issues: [],
+        tmuxWindowExists: true,
+        gitWorktreeValid: true,
+        pathAccessible: true,
+        branchValid: true
+      })
+      
+      const result = await sessionManager.deleteSession('test-project', 'test-feature')
+      
+      expect(result.success).toBe(false)
+      expect(result.error).toContain('Partial deletion failure')
+      expect(result.metadata?.partialSuccess).toBe(true)
+      expect(result.metadata?.operationsCompleted).toBeGreaterThan(0)
+    })
+    
+    it('should detect and handle orphaned sessions', async () => {
+      // Mock orphaned tmux window (window exists but no session object)
+      const windows: WindowInfo[] = [
+        {
+          name: 'orphaned-project:orphaned-feature',
+          panePath: '/test/orphaned-project/.worktrees/orphaned-feature'
+        }
+      ]
+      
+      mockTmuxAdapter.listWindows.mockResolvedValue(windows)
+      mockFs.stat.mockResolvedValue({
+        isDirectory: () => true
+      } as any)
+      mockFs.lstat.mockResolvedValue({
+        isSymbolicLink: () => false
+      } as any)
+      mockFs.access.mockResolvedValue(undefined)
+      mockGitAdapter.getStatus.mockResolvedValue({
+        branch: 'feature/orphaned-feature',
+        ahead: 0,
+        behind: 0,
+        staged: 0,
+        unstaged: 0,
+        untracked: 0,
+        hasUncommittedChanges: false
+      })
+      
+      // Mock that getSession returns null (no session found)
+      jest.spyOn(sessionManager, 'getSession').mockResolvedValue(null)
+      
+      // Mock successful orphan detection and cleanup
+      jest.spyOn(sessionManager as any, 'detectOrphanedSession').mockResolvedValue({
+        projectName: 'orphaned-project',
+        featureName: 'orphaned-feature',
+        projectPath: '/test/orphaned-project',
+        worktreePath: '/test/orphaned-project/.worktrees/orphaned-feature',
+        branch: 'feature/orphaned-feature',
+        gitStats: {
+          branch: 'feature/orphaned-feature',
+          ahead: 0,
+          behind: 0,
+          staged: 0,
+          unstaged: 0,
+          untracked: 0,
+          hasUncommittedChanges: false
+        },
+        isActive: false
+      })
+      
+      jest.spyOn(sessionManager as any, 'performSessionHealthCheck').mockResolvedValue({
+        isHealthy: true,
+        issues: [],
+        tmuxWindowExists: true,
+        gitWorktreeValid: true,
+        pathAccessible: true,
+        branchValid: true
+      })
+      
+      mockGitAdapter.rollbackChanges.mockResolvedValue(undefined)
+      mockGitAdapter.removeWorktree.mockResolvedValue(undefined)
+      mockTmuxAdapter.killWindow.mockResolvedValue(undefined)
+      
+      const result = await sessionManager.deleteSession('orphaned-project', 'orphaned-feature')
+      
+      expect(result.success).toBe(true)
+      expect(result.warnings).toContain(expect.stringContaining('Found orphaned resources'))
+    })
+  })
+})

@@ -1,0 +1,145 @@
+/**
+ * Fixed SessionManager tests with simplified mocking approach
+ */
+
+// Create a working mock implementation
+const mockTmuxAdapter = {
+  ensureSession: jest.fn(),
+  listWindows: jest.fn(),
+  createWindow: jest.fn(),
+  deleteWindow: jest.fn(),
+  capturePane: jest.fn(),
+  clearCache: jest.fn(),
+}
+
+const mockGitAdapter = {
+  getStatus: jest.fn(),
+  getProjectName: jest.fn(),
+  createWorktree: jest.fn(),
+  deleteWorktree: jest.fn(),
+}
+
+const mockSessionUtils = {
+  SessionStatusAnalyzer: {
+    determineStatus: jest.fn(),
+  },
+  PathValidator: {
+    validatePath: jest.fn(),
+  },
+  SessionSearchUtil: {
+    filterSessions: jest.fn(),
+  },
+  SessionSafetyValidator: {
+    validateCreationParams: jest.fn(),
+  },
+  SessionPerformanceMonitor: {
+    timeOperation: jest.fn(),
+    getAllMetrics: jest.fn(),
+  },
+}
+
+// Mock all modules before importing
+jest.mock('@/lib/adapters/tmux', () => ({ tmuxAdapter: mockTmuxAdapter }))
+jest.mock('@/lib/adapters/git', () => ({ gitAdapter: mockGitAdapter }))
+jest.mock('@/lib/utils/session-utils', () => mockSessionUtils)
+jest.mock('@/lib/logger', () => ({
+  logger: { createChild: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() }) }
+}))
+jest.mock('fs/promises', () => ({
+  stat: jest.fn(),
+  lstat: jest.fn(),
+  access: jest.fn(),
+}))
+jest.mock('@/lib/command-executor', () => ({
+  CommandExecutor: { execute: jest.fn() }
+}))
+
+// Import after mocks
+import { SessionManager } from '@/lib/managers/SessionManager'
+
+describe('SessionManager - Fixed Tests', () => {
+  let sessionManager: SessionManager
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    
+    // Set up working mock implementations
+    mockTmuxAdapter.ensureSession.mockResolvedValue(undefined)
+    mockTmuxAdapter.listWindows.mockResolvedValue([])
+    mockTmuxAdapter.capturePane.mockResolvedValue('mock output')
+    
+    mockGitAdapter.getStatus.mockResolvedValue({
+      branch: 'feature/test',
+      ahead: 0,
+      behind: 0,
+      staged: 0,
+      unstaged: 0,
+      untracked: 0,
+      hasUncommittedChanges: false,
+    })
+    mockGitAdapter.getProjectName.mockReturnValue('test-project')
+    
+    mockSessionUtils.SessionPerformanceMonitor.timeOperation.mockImplementation(
+      async (_name: string, fn: () => Promise<any>) => await fn()
+    )
+    mockSessionUtils.SessionSearchUtil.filterSessions.mockImplementation(
+      (sessions: any[]) => sessions
+    )
+    mockSessionUtils.SessionStatusAnalyzer.determineStatus.mockReturnValue('active')
+    mockSessionUtils.SessionSafetyValidator.validateCreationParams.mockReturnValue({
+      valid: true,
+      errors: [],
+      warnings: []
+    })
+    mockSessionUtils.SessionPerformanceMonitor.getAllMetrics.mockReturnValue({})
+    
+    sessionManager = new SessionManager()
+  })
+
+  describe('Basic Functionality', () => {
+    it('should be instantiated correctly', () => {
+      expect(sessionManager).toBeInstanceOf(SessionManager)
+    })
+
+    it('should return empty array when no tmux windows exist', async () => {
+      const sessions = await sessionManager.listSessions()
+      
+      expect(sessions).toEqual([])
+      expect(mockTmuxAdapter.ensureSession).toHaveBeenCalled()
+      expect(mockTmuxAdapter.listWindows).toHaveBeenCalled()
+    })
+
+    it('should capture session output', async () => {
+      const output = await sessionManager.getSessionOutput('test-project', 'test-feature')
+      
+      expect(output).toBe('mock output')
+      expect(mockTmuxAdapter.capturePane).toHaveBeenCalledWith('test-project:test-feature', undefined)
+    })
+  })
+
+  describe('Cache Management', () => {
+    it('should clear all caches', () => {
+      sessionManager.clearAllCaches()
+      // This test just verifies the method exists and can be called
+      expect(true).toBe(true)
+    })
+
+    it('should return cache statistics', () => {
+      const stats = sessionManager.getCacheStats()
+      expect(stats).toBeDefined()
+      expect(typeof stats).toBe('object')
+    })
+  })
+
+  describe('Validation', () => {
+    it('should validate getSessionOutput parameters', async () => {
+      await expect(sessionManager.getSessionOutput('', 'feature'))
+        .rejects
+        .toThrow('Project name and feature name are required')
+        
+      await expect(sessionManager.getSessionOutput('project', ''))
+        .rejects
+        .toThrow('Project name and feature name are required')
+    })
+  })
+})
