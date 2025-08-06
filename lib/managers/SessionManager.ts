@@ -654,7 +654,7 @@ export class SessionManager {
         command 
       })
       
-      if (error instanceof TmuxError) {
+      if (error instanceof Error) {
         throw new SessionError(`Failed to send command: ${error.message}`)
       }
       

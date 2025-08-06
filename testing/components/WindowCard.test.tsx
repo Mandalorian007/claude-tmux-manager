@@ -1,16 +1,16 @@
 /**
- * Basic SessionCard test - minimal working tests without complex JSX
+ * Basic WindowCard test - minimal working tests without complex JSX
  */
 
-describe('SessionCard Component', () => {
+describe('WindowCard Component', () => {
   it('should pass basic smoke test', () => {
     expect(true).toBe(true)
   })
 
   // Note: JSX component tests require more complex setup
   // For now, test basic interfaces and data structures used by the component
-  it('should handle session data structure', () => {
-    const mockSession = {
+  it('should handle window data structure', () => {
+    const mockWindow = {
       projectName: 'test-project',
       featureName: 'test-feature',
       projectPath: '/test/project',
@@ -28,14 +28,14 @@ describe('SessionCard Component', () => {
       isActive: true,
     }
     
-    expect(mockSession.projectName).toBe('test-project')
-    expect(mockSession.featureName).toBe('test-feature')
-    expect(mockSession.isActive).toBe(true)
-    expect(mockSession.gitStats.hasUncommittedChanges).toBe(false)
+    expect(mockWindow.projectName).toBe('test-project')
+    expect(mockWindow.featureName).toBe('test-feature')
+    expect(mockWindow.isActive).toBe(true)
+    expect(mockWindow.gitStats.hasUncommittedChanges).toBe(false)
   })
 
-  it('should handle session with changes', () => {
-    const mockSessionWithChanges = {
+  it('should handle window with changes', () => {
+    const mockWindowWithChanges = {
       projectName: 'my-project',
       featureName: 'new-feature',
       projectPath: '/path/to/project',
@@ -53,10 +53,20 @@ describe('SessionCard Component', () => {
       isActive: true,
     }
     
-    expect(mockSessionWithChanges.gitStats.hasUncommittedChanges).toBe(true)
-    expect(mockSessionWithChanges.gitStats.staged + mockSessionWithChanges.gitStats.unstaged).toBeGreaterThan(0)
+    expect(mockWindowWithChanges.gitStats.hasUncommittedChanges).toBe(true)
+    expect(mockWindowWithChanges.gitStats.staged + mockWindowWithChanges.gitStats.unstaged).toBeGreaterThan(0)
   })
 
+  it('should handle selection state', () => {
+    const selectionProps = {
+      onSelect: undefined,
+      isSelected: false
+    }
+    
+    expect(typeof selectionProps.isSelected).toBe('boolean')
+    expect(selectionProps.isSelected).toBe(false)
+  })
+  
   it('should handle view mode options', () => {
     const viewModes = ['grid', 'list']
     

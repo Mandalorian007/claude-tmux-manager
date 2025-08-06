@@ -62,6 +62,30 @@ export interface WindowCardProps {
   window: WorkspaceWindow
   onDelete?: (projectName: string, featureName: string) => void
   viewMode?: ViewMode
+  onSelect?: (window: WorkspaceWindow) => void
+  isSelected?: boolean
+}
+
+export interface WindowListSidebarProps {
+  windows: WorkspaceWindow[]
+  selectedWindow?: WorkspaceWindow
+  onWindowSelect: (window: WorkspaceWindow) => void
+  projects: Record<string, number>
+  selectedProject: string
+  onProjectSelect: (project: string) => void
+  filterStatus: FilterStatus
+  onFilterChange: (status: FilterStatus) => void
+  totalWindows: number
+  activeWindows: number
+  readyForPRWindows: number
+  idleWindows: number
+  searchQuery: string
+  onSearchChange: (query: string) => void
+}
+
+export interface ExpandedWindowViewProps {
+  window?: WorkspaceWindow
+  onDelete?: (projectName: string, featureName: string) => void
 }
 
 export interface EmptyStateProps {

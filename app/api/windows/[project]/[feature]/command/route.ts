@@ -56,7 +56,7 @@ export async function POST(
     }
 
     // Send command to window
-    const result = await windowManager.sendCommand(projectName, featureName, command.trim())
+    const result = await windowManager.sendCommandWithResult(projectName, featureName, command.trim())
 
     if (!result.success) {
       logger.error('Failed to send command to window', {
