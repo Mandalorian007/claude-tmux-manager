@@ -5,11 +5,18 @@ import { CommandExecutor } from '@/lib/command-executor'
 
 const routeLogger = logger.createChild({ component: 'TerminalAPI' })
 
+interface RouteParams {
+  params: Promise<{
+    project: string
+    feature: string
+  }>
+}
+
 export async function POST(
   request: NextRequest,
-  { params }: { params: { project: string; feature: string } }
+  { params }: RouteParams
 ) {
-  const { project, feature } = params
+  const { project, feature } = await params
   
   routeLogger.debug('Opening terminal for session', { project, feature })
   
