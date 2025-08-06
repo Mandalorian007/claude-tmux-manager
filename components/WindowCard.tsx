@@ -98,16 +98,7 @@ export function WindowCard({ window, onDelete, viewMode = 'grid' }: WindowCardPr
             >
               <ExternalLink className="w-3 h-3" />
             </button>
-            {onDelete && (
-              <button
-                onClick={() => onDelete(window.projectName, window.featureName)}
-                className="p-1.5 text-muted hover:text-error hover:bg-error/10 rounded text-xs transition-all duration-200 ml-1"
-                title="Clean Up"
-                data-testid="delete-session-button"
-              >
-                <Trash2 className="w-3 h-3" />
-              </button>
-            )}
+
           </div>
         </div>
       </div>
@@ -153,16 +144,7 @@ export function WindowCard({ window, onDelete, viewMode = 'grid' }: WindowCardPr
                 <span className="text-muted opacity-60 text-xs">clean</span>
               )}
             </div>
-            {onDelete && (
-              <button
-                onClick={() => onDelete(window.projectName, window.featureName)}
-                className="opacity-0 group-hover:opacity-100 p-1.5 text-muted hover:text-error hover:bg-error/10 rounded transition-all duration-200"
-                title="Clean Up"
-                data-testid="delete-session-button"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            )}
+
           </div>
         </div>
         
@@ -246,10 +228,17 @@ export function WindowCard({ window, onDelete, viewMode = 'grid' }: WindowCardPr
             <Edit3 className="w-4 h-4" />
             Edit
           </button>
-          <button className="flex items-center justify-center gap-2 px-3 py-2 bg-transparent border border-border text-muted hover:text-error hover:border-error/50 rounded text-sm transition-all duration-200">
-            <Trash2 className="w-4 h-4" />
-            Clean Up
-          </button>
+          {onDelete && (
+            <button 
+              onClick={() => onDelete(window.projectName, window.featureName)}
+              className="flex items-center justify-center gap-2 px-3 py-2 bg-error/10 border border-error/30 text-error hover:bg-error hover:text-white hover:border-error rounded text-sm transition-all duration-200"
+              data-testid="cleanup-button"
+              title="Clean Up Window"
+            >
+              <Trash2 className="w-4 h-4" />
+              Clean Up
+            </button>
+          )}
         </div>
       </div>
     </div>
