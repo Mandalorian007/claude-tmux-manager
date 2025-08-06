@@ -3,14 +3,14 @@
 import { useEffect, useState } from 'react'
 
 interface KeyboardShortcutsProps {
-  onNewSession?: () => void
+  onNewWindow?: () => void
   onRefresh?: () => void
   onSearch?: () => void
   onEscape?: () => void
 }
 
 export function useKeyboardShortcuts({
-  onNewSession,
+  onNewWindow,
   onRefresh,
   onSearch,
   onEscape
@@ -33,10 +33,10 @@ export function useKeyboardShortcuts({
       const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0
       const cmdOrCtrl = isMac ? event.metaKey : event.ctrlKey
 
-      // Cmd/Ctrl + N: New Session
-      if (cmdOrCtrl && event.key === 'n' && onNewSession) {
+      // Cmd/Ctrl + N: New Window
+      if (cmdOrCtrl && event.key === 'n' && onNewWindow) {
         event.preventDefault()
-        onNewSession()
+        onNewWindow()
       }
 
       // Cmd/Ctrl + R: Refresh
@@ -62,7 +62,7 @@ export function useKeyboardShortcuts({
     return () => {
       document.removeEventListener('keydown', handleKeyDown)
     }
-  }, [onNewSession, onRefresh, onSearch, onEscape])
+  }, [onNewWindow, onRefresh, onSearch, onEscape])
 }
 
 interface ShortcutHintProps {

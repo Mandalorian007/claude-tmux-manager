@@ -11,7 +11,7 @@ interface SearchBarProps {
 }
 
 export const SearchBar = forwardRef<HTMLInputElement, SearchBarProps>(
-  ({ value, onChange, placeholder = "Search sessions, branches...", className = "" }, ref) => {
+  ({ value, onChange, placeholder = "Search windows, branches...", className = "" }, ref) => {
     const [isFocused, setIsFocused] = useState(false)
     const [showCursor, setShowCursor] = useState(true)
     const [searchTip, setSearchTip] = useState(0)

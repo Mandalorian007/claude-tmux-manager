@@ -5,19 +5,19 @@ import { X, FolderOpen, Plus, Zap, Terminal, GitBranch } from 'lucide-react'
 import { LoadingSpinner } from './LoadingSpinner'
 import type { CreateSessionRequest } from '@/types'
 
-interface NewSessionDialogProps {
+interface NewWindowDialogProps {
   isOpen: boolean
   onClose: () => void
-  onSubmit: (request: CreateSessionRequest) => void
+  onSubmit: (request: CreateWindowRequest) => void
   isLoading?: boolean
 }
 
-export function NewSessionDialog({ 
+export function NewWindowDialog({ 
   isOpen, 
   onClose, 
   onSubmit, 
   isLoading = false 
-}: NewSessionDialogProps) {
+}: NewWindowDialogProps) {
   const [projectPath, setProjectPath] = useState('')
   const [featureName, setFeatureName] = useState('')
   const [enhancedMode, setEnhancedMode] = useState(true)
@@ -38,9 +38,9 @@ export function NewSessionDialog({
   useEffect(() => {
     if (projectPath && featureName) {
       const projectName = projectPath.split('/').pop() || 'project'
-      setPreviewCommand(`tmux new-session -s "${projectName}-${featureName}" -c "${projectPath}"`)
+      setPreviewCommand(`tmux new-window -t claude-tmux-manager -n "${projectName}:${featureName}" -c "${projectPath}"`)
     } else {
-      setPreviewCommand('tmux new-session -s "project-feature" -c "/path/to/project"')
+      setPreviewCommand('tmux new-window -t claude-tmux-manager -n "project:feature" -c "/path/to/project"')
     }
   }, [projectPath, featureName])
 
@@ -82,7 +82,7 @@ export function NewSessionDialog({
         bg-card-bg border-2 border-accent/30 rounded-lg p-6 w-full max-w-lg         transition-all duration-300 transform
         ${isVisible ? 'scale-100 translate-y-0' : 'scale-95 translate-y-4'}
         relative overflow-hidden
-      `} data-testid="new-session-dialog">
+      `} data-testid="new-window-dialog">
         {/* Terminal window chrome */}
         <div className="absolute top-0 left-0 right-0 h-6 bg-background/80 flex items-center px-3 gap-2">
           <div className="flex items-center gap-1.5">
@@ -90,13 +90,13 @@ export function NewSessionDialog({
             <div className="w-2.5 h-2.5 bg-warning rounded-full" />
             <div className="w-2.5 h-2.5 bg-success rounded-full" />
           </div>
-          <span className="text-xs text-muted font-mono ml-2">create-session.sh</span>
+          <span className="text-xs text-muted font-mono ml-2">create-window.sh</span>
         </div>
         <div className="flex items-center justify-between mb-6 mt-8">
           <div className="flex items-center gap-2">
             <Terminal className="w-5 h-5 text-accent animate-pulse" />
             <h2 className="text-xl font-semibold text-foreground font-mono">
-              <span className="text-accent">$</span> new-session
+              <span className="text-accent">$</span> new-window
             </h2>
           </div>
           <button
@@ -208,7 +208,7 @@ export function NewSessionDialog({
                   </span>
                 </div>
                 <div className="text-muted text-xs mt-2">
-                  <div>✓ Create tmux session</div>
+                  <div>✓ Create tmux window</div>
                   <div>✓ Setup git worktree</div>
                   <div>✓ Initialize Claude Code workspace</div>
                   {enhancedMode && <div>✓ Enable enhanced features</div>}

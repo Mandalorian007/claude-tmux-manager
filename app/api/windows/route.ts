@@ -1,17 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { sessionManager } from '@/lib/managers/SessionManager'
-import { SessionError, ValidationError, TmuxError, GitError } from '@/lib/errors'
+import { windowManager } from '@/lib/managers/WindowManager'
+import { WindowError, ValidationError, TmuxError, GitError } from '@/lib/errors'
 import { logger } from '@/lib/logger'
 import type { 
-  CreateSessionRequest, 
-  SessionResponse, 
-  CreateSessionResponse,
-  SessionFilter,
-  SessionSearchOptions,
-  SessionOperationResult
+  CreateWindowRequest, 
+  WindowResponse, 
+  CreateWindowResponse,
+  WindowFilter,
+  WindowSearchOptions,
+  WindowOperationResult,
+  // Backward compatibility
+  CreateSessionRequest,
+  SessionResponse,
+  CreateSessionResponse
 } from '@/types'
 
-const requestLogger = logger.createChild({ component: 'SessionsAPI' })
+const requestLogger = logger.createChild({ component: 'WindowsAPI' })
 
 // Request validation
 function validatePaginationParams(searchParams: URLSearchParams) {

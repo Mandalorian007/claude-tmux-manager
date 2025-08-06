@@ -4,15 +4,15 @@ import { useState, useEffect } from 'react'
 import { Plus, Terminal, GitBranch, Zap, Search, Coffee } from 'lucide-react'
 
 interface EmptyStateProps {
-  type: 'no-sessions' | 'no-results' | 'loading'
+  type: 'no-windows' | 'no-results' | 'loading'
   searchQuery?: string
   selectedProject?: string
   filterStatus?: string
-  onCreateSession?: () => void
+  onCreateWindow?: () => void
 }
 
 const ASCII_ART = {
-  noSessions: [
+  noWindows: [
     '    ┌─────────────────────────┐',
     '    │     tmux manager v1.0   │',
     '    └─────────────────────────┘',
@@ -27,7 +27,7 @@ const ASCII_ART = {
   ],
   noResults: [
     '    ╔═══════════════════════╗',
-    '    ║   404: Sessions Not   ║',
+    '    ║   404: Windows Not    ║',
     '    ║       Found!          ║',
     '    ╚═══════════════════════╝',
     '           ┌─────────┐',
@@ -44,7 +44,7 @@ const ASCII_ART = {
 }
 
 const TERMINAL_TIPS = [
-  '$ tmux new-session -s "my-feature"',
+      '$ tmux new-window -t claude-tmux-manager -n "my-feature"',
   '$ git worktree add ../feature-branch',
   '$ claude --enhance --project ./src',
   '$ git checkout -b feature/awesome-feature',
@@ -53,10 +53,10 @@ const TERMINAL_TIPS = [
 
 const ENCOURAGEMENTS = [
   "Time to build something amazing! ⚡",
-  "Every great feature starts with a single session 🚀",
+  "Every great feature starts with a single window 🚀",
   "Ready when you are, developer! 💻",
   "Let's turn that idea into code! ✨",
-  "Your next breakthrough is one session away 🌟"
+  "Your next breakthrough is one window away 🌟"
 ]
 
 export function EmptyState({ 
@@ -64,7 +64,7 @@ export function EmptyState({
   searchQuery, 
   selectedProject, 
   filterStatus, 
-  onCreateSession 
+  onCreateWindow 
 }: EmptyStateProps) {
   const [currentTip, setCurrentTip] = useState(0)
   const [currentEncouragement, setCurrentEncouragement] = useState(0)
@@ -107,7 +107,7 @@ export function EmptyState({
                 </div>
               ))}
             </div>
-            <p className="text-lg font-medium text-foreground mb-2">Scanning for sessions...</p>
+            <p className="text-lg font-medium text-foreground mb-2">Scanning for windows...</p>
             <p className="text-sm text-muted">Checking tmux processes and git worktrees</p>
           </div>
         )
@@ -124,7 +124,7 @@ export function EmptyState({
             </div>
             
             <Search className="w-12 h-12 mx-auto mb-4 text-muted" />
-            <p className="text-lg font-medium mb-2">No sessions found</p>
+            <p className="text-lg font-medium mb-2">No windows found</p>
             
             <div className="text-sm text-muted space-y-1 mb-6">
               {searchQuery && (
@@ -143,19 +143,19 @@ export function EmptyState({
               <div className="text-xs text-muted space-y-1">
                 <p>• Try different keywords or filters</p>
                 <p>• Check project name spelling</p>
-                <p>• Clear filters to see all sessions</p>
-                <p>• Create a new session to get started</p>
+                          <p>• Clear filters to see all windows</p>
+          <p>• Create a new window to get started</p>
               </div>
             </div>
           </div>
         )
 
-      case 'no-sessions':
+      case 'no-windows':
       default:
         return (
-          <div className="text-center" data-testid="empty-state-no-sessions">
+          <div className="text-center" data-testid="empty-state-no-windows">
             <div className="font-mono text-xs text-muted space-y-1 mb-6">
-              {ASCII_ART.noSessions.map((line, i) => (
+              {ASCII_ART.noWindows.map((line, i) => (
                 <div key={i} className={[0, 1, 2].includes(i) ? 'text-accent' : ''}>
                   {line}
                 </div>
@@ -164,16 +164,17 @@ export function EmptyState({
             
             <div className="mb-6">
               <GitBranch className="w-16 h-16 mx-auto mb-4 text-muted" />
-              <p className="text-xl font-medium mb-2">No active sessions</p>
+              <p className="text-xl font-medium mb-2">No active windows</p>
               <p className="text-muted mb-4">{ENCOURAGEMENTS[currentEncouragement]}</p>
               
-              {onCreateSession && (
+              {onCreateWindow && (
                 <button
-                  onClick={onCreateSession}
+                  onClick={onCreateWindow}
                   className="inline-flex items-center gap-2 px-6 py-3 bg-accent text-background rounded-lg hover:bg-accent/90 transition-all duration-200 font-medium  hover:scale-105 active:scale-95 group"
+                  data-testid="create-window-button"
                 >
                   <Plus className="w-5 h-5 group-hover:rotate-90 transition-transform duration-200" />
-                  Create Your First Session
+                  Create Your First Window
                   <Zap className="w-4 h-4 ml-1" />
                 </button>
               )}
@@ -222,7 +223,7 @@ export function TerminalEmptyState({ type, ...props }: EmptyStateProps) {
             <div className="w-3 h-3 bg-success rounded-full" />
           </div>
           <div className="flex-1 text-center">
-            <span className="text-xs font-mono text-muted">claude-tmux-manager — sessions</span>
+            <span className="text-xs font-mono text-muted">claude-tmux-manager — windows</span>
           </div>
         </div>
         

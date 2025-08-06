@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { Zap, Plus, RefreshCw, Search, Grid3x3, List, GitBranch, Terminal, Coffee } from 'lucide-react'
-import { SessionCard } from '@/components/SessionCard'
-import { NewSessionDialog } from '@/components/NewSessionDialog'
+import { WindowCard } from '@/components/WindowCard'
+import { NewWindowDialog } from '@/components/NewWindowDialog'
 import { SearchBar } from '@/components/SearchBar'
 import { ProjectSidebar } from '@/components/ProjectSidebar'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
@@ -15,13 +15,13 @@ import { useTerminalNotifications } from '@/components/TerminalNotification'
 import { WelcomeMessage, useWelcomeMessage } from '@/components/WelcomeMessage'
 import { useEasterEgg } from '@/components/EasterEgg'
 import { mockSessions, useMockData } from '@/lib/mockData'
-import type { Session, CreateSessionRequest, SessionResponse, CreateSessionResponse } from '@/types'
+import type { WorkspaceWindow, CreateWindowRequest, WindowResponse, CreateWindowResponse } from '@/types'
 
 type ViewMode = 'grid' | 'list'
 type FilterStatus = 'all' | 'active' | 'ready-for-pr' | 'idle'
 
 export default function HomePage() {
-  const [sessions, setSessions] = useState<Session[]>([])
+  const [windows, setWindows] = useState<WorkspaceWindow[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
@@ -36,61 +36,61 @@ export default function HomePage() {
   const { showWelcome, dismissWelcome } = useWelcomeMessage()
   const { EasterEggModal, MatrixRain } = useEasterEgg()
 
-  const fetchSessions = async () => {
+  const fetchWindows = async () => {
     try {
       setIsRefreshing(true)
       
       if (useMockData) {
         // Use mock data for demonstration
         await new Promise(resolve => setTimeout(resolve, 800)) // Simulate API delay
-        setSessions(mockSessions)
+        setWindows(mockSessions) // Note: mockSessions will be renamed to mockWindows
       } else {
-        const response = await fetch('/api/sessions')
-        const data: SessionResponse = await response.json()
-        setSessions(data.sessions)
+        const response = await fetch('/api/windows')
+        const data: WindowResponse = await response.json()
+        setWindows(data.windows)
       }
     } catch (error) {
-      console.error('Failed to fetch sessions:', error)
+      console.error('Failed to fetch windows:', error)
       // Fallback to mock data if API fails
-      setSessions(mockSessions)
+      setWindows(mockSessions)
     } finally {
       setIsLoading(false)
       setIsRefreshing(false)
     }
   }
 
-  const handleCreateSession = async (request: CreateSessionRequest) => {
+  const handleCreateWindow = async (request: CreateWindowRequest) => {
     try {
       setIsCreating(true)
-      showInfo('Creating new session...', {
+      showInfo('Creating new window...', {
         message: 'Setting up tmux environment and git worktree',
-        command: `tmux new-session -s "${request.projectPath.split('/').pop()}-${request.featureName}"`
+        command: `tmux new-window -t claude-tmux-manager -n "${request.projectPath.split('/').pop()}:${request.featureName}"`
       })
       
-      const response = await fetch('/api/sessions', {
+              const response = await fetch('/api/windows', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(request)
       })
       
-      const data: CreateSessionResponse = await response.json()
+      const data: CreateWindowResponse = await response.json()
       
-      if (data.success && data.session) {
-        setSessions(prev => [...prev, data.session!])
+      if (data.success && data.window) {
+        setWindows(prev => [...prev, data.window!])
         setIsDialogOpen(false)
-        showSuccess('Session created successfully! 🚀', {
-          message: `Ready to start coding on ${data.session.featureName}`,
-          command: `cd ${request.projectPath} && tmux attach-session -t "${data.session.projectName}-${data.session.featureName}"`
+        showSuccess('Window created successfully! 🚀', {
+          message: `Ready to start coding on ${data.window.featureName}`,
+          command: `cd ${request.projectPath} && tmux select-window -t claude-tmux-manager:"${data.window.projectName}:${data.window.featureName}"`
         })
       } else {
-        showError('Failed to create session', {
+        showError('Failed to create window', {
           message: data.error || 'Unknown error occurred',
           command: 'Check logs for more details'
         })
       }
     } catch (error) {
-      console.error('Failed to create session:', error)
-      showError('Session creation failed', {
+      console.error('Failed to create window:', error)
+      showError('Window creation failed', {
         message: 'Network error or server unavailable',
         command: 'curl -f http://localhost:3000/api/health'
       })
@@ -99,33 +99,33 @@ export default function HomePage() {
     }
   }
 
-  const handleDeleteSession = async (projectName: string, featureName: string) => {
-    showInfo('Cleaning up session...', {
-      message: 'Removing tmux session and git worktree',
-      command: `tmux kill-session -t "${projectName}-${featureName}"`
+  const handleDeleteWindow = async (projectName: string, featureName: string) => {
+    showInfo('Cleaning up window...', {
+      message: 'Removing tmux window and git worktree',
+      command: `tmux kill-window -t claude-tmux-manager:"${projectName}:${featureName}"`
     })
 
     try {
-      const response = await fetch(`/api/sessions/${projectName}/${featureName}`, {
+              const response = await fetch(`/api/windows/${projectName}/${featureName}`, {
         method: 'DELETE'
       })
       
       if (response.ok) {
-        setSessions(prev => prev.filter(s => 
-          !(s.projectName === projectName && s.featureName === featureName)
+        setWindows(prev => prev.filter(w => 
+          !(w.projectName === projectName && w.featureName === featureName)
         ))
-        showSuccess('Session cleaned up successfully! 🧹', {
+        showSuccess('Window cleaned up successfully! 🧹', {
           message: `Removed ${projectName}:${featureName} and associated resources`,
           command: 'git worktree prune'
         })
       } else {
-        showError('Failed to delete session', {
-          message: 'Session may still be running or locked',
-          command: `tmux list-sessions | grep "${projectName}-${featureName}"`
+        showError('Failed to delete window', {
+          message: 'Window may still be running or locked',
+          command: `tmux list-windows -t claude-tmux-manager | grep "${projectName}:${featureName}"`
         })
       }
     } catch (error) {
-      console.error('Failed to delete session:', error)
+      console.error('Failed to delete window:', error)
       showError('Cleanup failed', {
         message: 'Network error during cleanup operation',
         command: 'Check server connection and try again'
@@ -134,19 +134,19 @@ export default function HomePage() {
   }
 
   // Compute stats and filtered data
-  const { stats, projectCounts, filteredSessions } = useMemo(() => {
-    const projectCounts = sessions.reduce((acc, session) => {
-      acc[session.projectName] = (acc[session.projectName] || 0) + 1
+  const { stats, projectCounts, filteredWindows } = useMemo(() => {
+    const projectCounts = windows.reduce((acc, window) => {
+      acc[window.projectName] = (acc[window.projectName] || 0) + 1
       return acc
     }, {} as Record<string, number>)
-
+    
     const stats = {
-      sessions: sessions.length,
+      windows: windows.length,
       projects: Object.keys(projectCounts).length,
-      readyForPR: sessions.filter(s => s.gitStats.hasUncommittedChanges && s.gitStats.ahead > 0).length
+      readyForPR: windows.filter(w => w.gitStats.hasUncommittedChanges && w.gitStats.ahead > 0).length
     }
-
-    let filtered = sessions
+    
+    let filtered = windows
 
     // Filter by project
     if (selectedProject !== 'all') {
@@ -179,13 +179,13 @@ export default function HomePage() {
       )
     }
 
-    return { stats, projectCounts, filteredSessions: filtered }
-  }, [sessions, selectedProject, filterStatus, searchQuery])
+    return { stats, projectCounts, filteredWindows: filtered }
+  }, [windows, selectedProject, filterStatus, searchQuery])
 
   // Keyboard shortcuts
   useKeyboardShortcuts({
-    onNewSession: () => setIsDialogOpen(true),
-    onRefresh: fetchSessions,
+          onNewWindow: () => setIsDialogOpen(true),
+    onRefresh: fetchWindows,
     onSearch: () => searchInputRef.current?.focus(),
     onEscape: () => {
       if (isDialogOpen) {
@@ -200,7 +200,7 @@ export default function HomePage() {
   })
 
   useEffect(() => {
-    fetchSessions()
+    fetchWindows()
     // Trigger mount animation
     const timer = setTimeout(() => setMountAnimation(true), 100)
     return () => clearTimeout(timer)
@@ -231,8 +231,8 @@ export default function HomePage() {
             
             <div className="flex items-center gap-6 text-sm font-mono" data-testid="stats-container">
               <div className="flex items-center gap-1 px-3 py-1 bg-background/30 rounded border border-border/50 hover:border-accent/30 transition-colors">
-                <span className="text-muted">sessions:</span>
-                <span className="font-medium text-success animate-pulse" data-testid="stat-sessions">{stats.sessions}</span>
+                        <span className="text-muted">windows:</span>
+        <span className="font-medium text-success animate-pulse" data-testid="stat-windows">{stats.windows}</span>
               </div>
               <div className="flex items-center gap-1 px-3 py-1 bg-background/30 rounded border border-border/50 hover:border-accent/30 transition-colors">
                 <span className="text-muted">projects:</span>
@@ -259,10 +259,10 @@ export default function HomePage() {
               onProjectSelect={setSelectedProject}
               filterStatus={filterStatus}
               onFilterChange={setFilterStatus}
-              totalSessions={sessions.length}
-              activeSessions={sessions.filter(s => s.isActive).length}
-              readyForPRSessions={stats.readyForPR}
-              idleSessions={sessions.filter(s => !s.isActive).length}
+                      totalWindows={windows.length}
+        activeWindows={windows.filter(w => w.isActive).length}
+        readyForPRWindows={stats.readyForPR}
+        idleWindows={windows.filter(w => !w.isActive).length}
             />
           </div>
 
@@ -277,10 +277,10 @@ export default function HomePage() {
                   onClick={() => setIsDialogOpen(true)}
                   data-testid="new-session-button"
                 >
-                  New Session
+                  New Window
                 </ActionButton>
                 <div className="hidden lg:block">
-                  <ShortcutHint keys={['mod', 'n']} description="New session" />
+                  <ShortcutHint keys={['mod', 'n']} description="New window" />
                 </div>
               </div>
 
@@ -289,7 +289,7 @@ export default function HomePage() {
                   ref={searchInputRef}
                   value={searchQuery}
                   onChange={setSearchQuery}
-                  placeholder="Search sessions, branches, or files..."
+                  placeholder="Search windows, branches, or files..."
                 />
                 
                 <div className="flex items-center gap-1 bg-card-bg rounded-lg p-1">
@@ -313,11 +313,11 @@ export default function HomePage() {
 
                 <button
                   onClick={() => {
-                    fetchSessions()
+                    fetchWindows()
                     if (!isRefreshing) {
-                      showInfo('Refreshing sessions...', {
+                      showInfo('Refreshing windows...', {
                         message: 'Scanning tmux processes and git repositories',
-                        command: 'tmux list-sessions && git worktree list'
+                        command: 'tmux list-windows -t claude-tmux-manager && git worktree list'
                       })
                     }
                   }}
@@ -328,8 +328,8 @@ export default function HomePage() {
                     group
                   `}
                   disabled={isRefreshing}
-                  title={isRefreshing ? 'Refreshing...' : 'Refresh sessions'}
-                  data-testid="refresh-sessions"
+                  title={isRefreshing ? 'Refreshing...' : 'Refresh windows'}
+                  data-testid="refresh-windows"
                 >
                   <RefreshCw className={`
                     w-4 h-4 transition-transform duration-200
@@ -339,7 +339,7 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Sessions Grid/List */}
+            {/* Windows Grid/List */}
             <div className={`
               ${viewMode === 'grid' ? 'grid gap-4 grid-cols-1 xl:grid-cols-2' : 'space-y-1'}
               transition-all duration-300
@@ -349,24 +349,24 @@ export default function HomePage() {
                 <div className="col-span-full">
                   <EmptyState type="loading" />
                 </div>
-              ) : filteredSessions.length === 0 ? (
+              ) : filteredWindows.length === 0 ? (
                 <EmptyState
-                  type={searchQuery || selectedProject !== 'all' || filterStatus !== 'all' ? 'no-results' : 'no-sessions'}
+                  type={searchQuery || selectedProject !== 'all' || filterStatus !== 'all' ? 'no-results' : 'no-windows'}
                   searchQuery={searchQuery}
                   selectedProject={selectedProject !== 'all' ? selectedProject : undefined}
                   filterStatus={filterStatus !== 'all' ? filterStatus : undefined}
-                  onCreateSession={() => setIsDialogOpen(true)}
+                  onCreateWindow={() => setIsDialogOpen(true)}
                 />
               ) : (
-                filteredSessions.map((session, index) => (
+                filteredWindows.map((window, index) => (
                   <div
-                    key={`${session.projectName}:${session.featureName}`}
+                    key={`${window.projectName}:${window.featureName}`}
                     className="animate-fade-in"
                     style={{ animationDelay: `${index * 100}ms` }}
                   >
-                    <SessionCard
-                      session={session}
-                      onDelete={handleDeleteSession}
+                    <WindowCard
+                      window={window}
+                      onDelete={handleDeleteWindow}
                       viewMode={viewMode}
                     />
                   </div>
@@ -407,10 +407,10 @@ export default function HomePage() {
       <MatrixRain />
       <EasterEggModal />
       
-      <NewSessionDialog
+      <NewWindowDialog
         isOpen={isDialogOpen}
         onClose={() => setIsDialogOpen(false)}
-        onSubmit={handleCreateSession}
+        onSubmit={handleCreateWindow}
         isLoading={isCreating}
       />
       </div>

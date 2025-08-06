@@ -14,7 +14,7 @@ const TERMINAL_FRAMES = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧',
 const DOT_FRAMES = ['.', '..', '...', '']
 
 const LOADING_MESSAGES = [
-  'Initializing tmux session...',
+      'Initializing tmux window...',
   'Creating git worktree...',
   'Setting up development environment...',
   'Configuring Claude Code workspace...',

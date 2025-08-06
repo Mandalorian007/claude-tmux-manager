@@ -1,32 +1,32 @@
 import { GitBranch, ExternalLink, Edit3, Trash2, Activity, GitCommit, Terminal, Zap } from 'lucide-react'
-import type { Session } from '@/types'
+import type { WorkspaceWindow } from '@/types'
 import { useState } from 'react'
 
-interface SessionCardProps {
-  session: Session
+interface WindowCardProps {
+  window: WorkspaceWindow
   onDelete?: (projectName: string, featureName: string) => void
   viewMode?: 'grid' | 'list'
 }
 
-export function SessionCard({ session, onDelete, viewMode = 'grid' }: SessionCardProps) {
+export function WindowCard({ window, onDelete, viewMode = 'grid' }: WindowCardProps) {
   const [isHovered, setIsHovered] = useState(false)
   const [terminalCursor, setTerminalCursor] = useState(true)
   
-  const hasChanges = session.gitStats.hasUncommittedChanges
-  const totalAdded = session.gitStats.staged + session.gitStats.unstaged
-  const totalDeleted = session.gitStats.untracked // Simplified for mockup matching
-  const totalModified = session.gitStats.unstaged
+  const hasChanges = window.gitStats.hasUncommittedChanges
+  const totalAdded = window.gitStats.staged + window.gitStats.unstaged
+  const totalDeleted = window.gitStats.untracked // Simplified for mockup matching
+  const totalModified = window.gitStats.unstaged
   
   // Simulate some terminal output for the preview (only for grid view)
   const terminalPreview = [
-    `$ claude-code ${session.projectName}/${session.featureName}`,
+    `$ claude-code ${window.projectName}/${window.featureName}`,
     `Analyzing authentication flow...`,
     hasChanges ? '✓ Added refresh token generation' : '✓ All tests passing',
     hasChanges ? '✓ Implemented token rotation' : '✓ Bundle size reduced by 23%',
     hasChanges ? 'Running security tests...' : '⚠ 2 accessibility warnings to review',
     hasChanges ? '✓ All 37 tests passing' : 'Optimizing performance...',
     hasChanges 
-      ? `$ git commit -m "Add ${session.featureName.replace('-', ' ')} support"` 
+      ? `$ git commit -m "Add ${window.featureName.replace('-', ' ')} support"` 
       : '✓ Implemented React.memo'
   ].slice(0, viewMode === 'grid' ? 7 : 4)
 
@@ -37,9 +37,9 @@ export function SessionCard({ session, onDelete, viewMode = 'grid' }: SessionCar
         className="bg-card-bg border border-border rounded-lg hover:border-accent/50 transition-all duration-200 group px-4 py-2"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        data-testid="session-card"
-        data-project={session.projectName}
-        data-feature={session.featureName}
+        data-testid="window-card"
+        data-project={window.projectName}
+        data-feature={window.featureName}
       >
         <div className="flex items-center justify-between">
           {/* Left section: Project:Feature, Branch, Git stats */}
@@ -47,11 +47,11 @@ export function SessionCard({ session, onDelete, viewMode = 'grid' }: SessionCar
             {/* Project:Feature name with status indicator */}
             <div className="flex items-center gap-2 min-w-0">
               <h3 className="font-medium text-foreground text-sm truncate max-w-[200px]">
-                {session.projectName}
+                {window.projectName}
               </h3>
               <span className="text-muted text-sm">:</span>
-              <span className="text-accent font-medium text-sm truncate max-w-[150px]">{session.featureName}</span>
-              {session.isActive && (
+              <span className="text-accent font-medium text-sm truncate max-w-[150px]">{window.featureName}</span>
+              {window.isActive && (
                 <div className="w-1.5 h-1.5 bg-success rounded-full flex-shrink-0 animate-pulse" title="Active session" />
               )}
             </div>
@@ -59,7 +59,7 @@ export function SessionCard({ session, onDelete, viewMode = 'grid' }: SessionCar
             {/* Branch name */}
             <div className="flex items-center gap-1 text-xs text-muted min-w-0">
               <GitBranch className="w-3 h-3 flex-shrink-0" />
-              <span className="font-mono truncate max-w-[120px]">{session.gitStats.branch.replace('feature/', '')}</span>
+              <span className="font-mono truncate max-w-[120px]">{window.gitStats.branch.replace('feature/', '')}</span>
             </div>
             
             {/* Git stats - inline and compact */}
@@ -101,7 +101,7 @@ export function SessionCard({ session, onDelete, viewMode = 'grid' }: SessionCar
             </button>
             {onDelete && (
               <button
-                onClick={() => onDelete(session.projectName, session.featureName)}
+                onClick={() => onDelete(window.projectName, window.featureName)}
                 className="p-1.5 text-muted hover:text-error hover:bg-error/10 rounded text-xs transition-all duration-200 ml-1"
                 title="Clean Up"
                 data-testid="delete-session-button"
@@ -121,26 +121,26 @@ export function SessionCard({ session, onDelete, viewMode = 'grid' }: SessionCar
       className="bg-card-bg border border-border rounded-lg overflow-hidden hover:border-accent/50 transition-all duration-200 group"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      data-testid="session-card"
-      data-project={session.projectName}
-      data-feature={session.featureName}
+              data-testid="window-card"
+              data-project={window.projectName}
+        data-feature={window.featureName}
     >
       {/* Header */}
       <div className="p-4 pb-3">
         <div className="flex items-start justify-between mb-2">
           <div className="flex items-center gap-2 min-w-0 flex-1">
             <h3 className="font-medium text-foreground truncate">
-              {session.projectName}
+              {window.projectName}
             </h3>
             <span className="text-muted">:</span>
-            <span className="text-accent font-medium truncate">{session.featureName}</span>
-            {session.isActive && (
+            <span className="text-accent font-medium truncate">{window.featureName}</span>
+            {window.isActive && (
               <div className="w-2 h-2 bg-success rounded-full flex-shrink-0 animate-pulse" title="Active session" />
             )}
           </div>
           {onDelete && (
             <button
-              onClick={() => onDelete(session.projectName, session.featureName)}
+              onClick={() => onDelete(window.projectName, window.featureName)}
               className="opacity-0 group-hover:opacity-100 p-1.5 text-muted hover:text-error hover:bg-error/10 rounded transition-all duration-200"
               title="Clean Up"
               data-testid="delete-session-button"
@@ -154,10 +154,10 @@ export function SessionCard({ session, onDelete, viewMode = 'grid' }: SessionCar
         <div className="flex items-center gap-3 text-xs text-muted mb-3">
           <div className="flex items-center gap-1">
             <GitBranch className="w-3 h-3" />
-            <span className="font-mono">{session.gitStats.branch.replace('feature/', '')}</span>
+            <span className="font-mono">{window.gitStats.branch.replace('feature/', '')}</span>
           </div>
           <div className="font-mono">
-            {session.projectName}-{session.featureName}:0
+            {window.projectName}-{window.featureName}:0
           </div>
         </div>
 
@@ -190,7 +190,7 @@ export function SessionCard({ session, onDelete, viewMode = 'grid' }: SessionCar
                 <div className="w-2 h-2 bg-success rounded-full" />
               </div>
               <span className="text-xs text-muted ml-2">
-                {session.projectName}-{session.featureName}:0
+                {window.projectName}-{window.featureName}:0
               </span>
             </div>
             <Terminal className="w-3 h-3 text-muted" />
@@ -222,7 +222,7 @@ export function SessionCard({ session, onDelete, viewMode = 'grid' }: SessionCar
           {hasChanges && (
             <div className="text-accent mt-1 flex items-center gap-2">
               <Zap className="w-3 h-3" />
-              [{session.projectName}:{session.featureName}] Add {session.featureName.replace('-', ' ')} refresh token support
+              [{window.projectName}:{window.featureName}] Add {window.featureName.replace('-', ' ')} refresh token support
             </div>
           )}
           

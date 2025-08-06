@@ -13,7 +13,7 @@ export interface WindowInfo {
   panePath: string    // "/home/user/projects/my-backend/.worktrees/user-auth"
 }
 
-export interface Session {
+export interface WorkspaceWindow {
   projectName: string    // "my-backend"
   featureName: string    // "user-auth"
   projectPath: string    // "/home/user/projects/my-backend"
@@ -23,22 +23,28 @@ export interface Session {
   isActive: boolean
 }
 
-export interface CreateSessionRequest {
+export interface CreateWindowRequest {
   projectName: string
   featureName: string
   projectPath: string
   createWorktree: boolean
 }
 
-export interface CreateSessionResponse {
+export interface CreateWindowResponse {
   success: boolean
-  session?: Session
+  window?: WorkspaceWindow
   error?: string
 }
 
-export interface SessionResponse {
-  sessions: Session[]
+export interface WindowResponse {
+  windows: WorkspaceWindow[]
 }
+
+// Backward compatibility aliases
+export type Session = WorkspaceWindow
+export type CreateSessionRequest = CreateWindowRequest
+export type CreateSessionResponse = CreateWindowResponse  
+export type SessionResponse = WindowResponse
 
 // API Response types
 export interface ApiResponse<T = any> {
@@ -52,19 +58,22 @@ export type FilterStatus = 'all' | 'active' | 'ready-for-pr' | 'idle'
 export type ViewMode = 'grid' | 'list'
 
 // Component prop types
-export interface SessionCardProps {
-  session: Session
+export interface WindowCardProps {
+  window: WorkspaceWindow
   onDelete?: (projectName: string, featureName: string) => void
   viewMode?: ViewMode
 }
 
 export interface EmptyStateProps {
-  type: 'no-sessions' | 'no-results' | 'loading'
+  type: 'no-windows' | 'no-results' | 'loading'
   searchQuery?: string
   selectedProject?: string
   filterStatus?: string
-  onCreateSession?: () => void
+  onCreateWindow?: () => void
 }
+
+// Backward compatibility
+export type SessionCardProps = WindowCardProps
 
 // Enhanced types for the improved SessionManager
 export interface SessionFilter {

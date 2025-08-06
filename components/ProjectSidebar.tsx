@@ -10,10 +10,10 @@ interface ProjectSidebarProps {
   onProjectSelect: (project: string) => void
   filterStatus: FilterStatus
   onFilterChange: (status: FilterStatus) => void
-  totalSessions: number
-  activeSessions: number
-  readyForPRSessions: number
-  idleSessions: number
+  totalWindows: number
+  activeWindows: number
+  readyForPRWindows: number
+  idleWindows: number
 }
 
 export function ProjectSidebar({
@@ -22,18 +22,18 @@ export function ProjectSidebar({
   onProjectSelect,
   filterStatus,
   onFilterChange,
-  totalSessions,
-  activeSessions,
-  readyForPRSessions,
-  idleSessions
+  totalWindows,
+  activeWindows,
+  readyForPRWindows,
+  idleWindows
 }: ProjectSidebarProps) {
   const projectEntries = Object.entries(projects).sort(([a], [b]) => a.localeCompare(b))
 
   const statusFilters = [
-    { id: 'all' as const, label: 'All', count: totalSessions, icon: Folder },
-    { id: 'active' as const, label: 'Active', count: activeSessions, icon: Activity, color: 'text-success' },
-    { id: 'ready-for-pr' as const, label: 'Ready for PR', count: readyForPRSessions, icon: GitPullRequest, color: 'text-accent' },
-    { id: 'idle' as const, label: 'Idle', count: idleSessions, icon: Clock, color: 'text-muted' }
+    { id: 'all' as const, label: 'All', count: totalWindows, icon: Folder },
+    { id: 'active' as const, label: 'Active', count: activeWindows, icon: Activity, color: 'text-success' },
+    { id: 'ready-for-pr' as const, label: 'Ready for PR', count: readyForPRWindows, icon: GitPullRequest, color: 'text-accent' },
+    { id: 'idle' as const, label: 'Idle', count: idleWindows, icon: Clock, color: 'text-muted' }
   ]
 
   return (
@@ -56,7 +56,7 @@ export function ProjectSidebar({
               <span>All</span>
             </div>
             <span className="text-xs px-2 py-0.5 bg-secondary rounded-full">
-              {totalSessions}
+              {totalWindows}
             </span>
           </button>
           

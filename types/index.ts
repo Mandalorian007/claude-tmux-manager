@@ -13,7 +13,7 @@ export interface WindowInfo {
   panePath: string    // "/home/user/projects/my-backend/.worktrees/user-auth"
 }
 
-export interface Session {
+export interface WorkspaceWindow {
   projectName: string    // "my-backend"
   featureName: string    // "user-auth"
   projectPath: string    // "/home/user/projects/my-backend"
@@ -23,25 +23,25 @@ export interface Session {
   isActive: boolean
 }
 
-export interface CreateSessionRequest {
+export interface CreateWindowRequest {
   projectName: string
   projectPath: string
   featureName: string
   createWorktree?: boolean
 }
 
-export interface SessionResponse {
-  sessions: Session[]
+export interface WindowResponse {
+  windows: WorkspaceWindow[]
 }
 
-export interface CreateSessionResponse {
-  session: Session
+export interface CreateWindowResponse {
+  window: WorkspaceWindow
   success: boolean
   error?: string
 }
 
-// Enhanced types for the improved SessionManager
-export interface SessionFilter {
+// Enhanced types for the improved WindowManager
+export interface WindowFilter {
   projectName?: string
   featureName?: string
   hasUncommittedChanges?: boolean
@@ -52,7 +52,7 @@ export interface SessionFilter {
   lastActivityAfter?: Date
 }
 
-export interface SessionMetadata {
+export interface WindowMetadata {
   lastActivity?: Date
   commitInfo?: {
     hash: string
@@ -63,13 +63,13 @@ export interface SessionMetadata {
   outputHistory?: string[]
 }
 
-export interface SessionSearchResult {
-  session: Session
-  metadata?: SessionMetadata
+export interface WindowSearchResult {
+  window: WorkspaceWindow
+  metadata?: WindowMetadata
   matchScore: number
 }
 
-export interface SessionHealthCheck {
+export interface WindowHealthCheck {
   isHealthy: boolean
   issues: string[]
   tmuxWindowExists: boolean
@@ -78,7 +78,7 @@ export interface SessionHealthCheck {
   branchValid: boolean
 }
 
-export interface SessionOperationResult<T = void> {
+export interface WindowOperationResult<T = void> {
   success: boolean
   data?: T
   error?: string
@@ -86,30 +86,30 @@ export interface SessionOperationResult<T = void> {
   metadata?: Record<string, any>
 }
 
-export interface SessionStatusInfo {
+export interface WindowStatusInfo {
   exists: boolean
   isHealthy: boolean
   status: 'active' | 'idle' | 'ready-for-pr' | 'unhealthy' | 'not-found'
-  session?: Session
-  healthCheck?: SessionHealthCheck
-  metadata?: SessionMetadata
+  window?: WorkspaceWindow
+  healthCheck?: WindowHealthCheck
+  metadata?: WindowMetadata
 }
 
-// Additional types for enhanced session operations
-export interface SessionSearchOptions {
+// Additional types for enhanced window operations
+export interface WindowSearchOptions {
   text?: string
   tags?: string[]
   sortBy?: 'name' | 'activity' | 'score'
   limit?: number
 }
 
-export interface SessionStreamOptions {
+export interface WindowStreamOptions {
   interval?: number
   maxLines?: number
   includeEscapes?: boolean
 }
 
-export interface OrphanedSessionInfo {
+export interface OrphanedWindowInfo {
   windowName: string
   panePath: string
   detectedProject?: string
@@ -118,10 +118,10 @@ export interface OrphanedSessionInfo {
   issues: string[]
 }
 
-export interface SessionCacheStats {
-  sessionCacheSize: number
+export interface WindowCacheStats {
+  windowCacheSize: number
   metadataCacheSize: number
-  oldestSessionCacheEntry?: number
+  oldestWindowCacheEntry?: number
   oldestMetadataCacheEntry?: number
   hitRate?: number
   missRate?: number
@@ -131,7 +131,7 @@ export interface SessionCacheStats {
 declare global {
   var testUtils: {
     waitForAsync: (ms?: number) => Promise<void>
-    createMockSession: (overrides?: Partial<Session>) => Session
+    createMockWindow: (overrides?: Partial<WorkspaceWindow>) => WorkspaceWindow
     createMockGitStats: (overrides?: Partial<GitStats>) => GitStats
     createMockWindowInfo: (overrides?: Partial<WindowInfo>) => WindowInfo
   }
