@@ -92,17 +92,18 @@ class WindowManagerImpl extends SessionManager {
   }
 
   /**
-   * Send command to a window
+   * Send command to a window with result wrapper
    */
-  async sendCommand(projectName: string, featureName: string, command: string): Promise<WindowOperationResult<void>> {
+  async sendCommandWithResult(projectName: string, featureName: string, command: string): Promise<WindowOperationResult<void>> {
     try {
       // Use the inherited sendCommand method from SessionManager
       await super.sendCommand(projectName, featureName, command)
-      return { success: true }
+      return { success: true, warnings: [] }
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error occurred'
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
+        warnings: []
       }
     }
   }

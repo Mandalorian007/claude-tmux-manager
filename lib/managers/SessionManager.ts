@@ -1,7 +1,7 @@
 import { tmuxAdapter } from '@/lib/adapters/tmux'
 import { gitAdapter } from '@/lib/adapters/git'
 import type { Session, CreateSessionRequest, WindowInfo, GitStats, SessionSearchOptions } from '@/types'
-import { SessionError, ValidationError } from '@/lib/errors'
+import { SessionError, ValidationError, TmuxError } from '@/lib/errors'
 import { logger } from '@/lib/logger'
 import path from 'path'
 import fs from 'fs/promises'

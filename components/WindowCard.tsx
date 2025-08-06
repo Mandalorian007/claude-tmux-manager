@@ -1,4 +1,4 @@
-import { ExternalLink, Trash2, Activity, GitCommit, Terminal, Zap, GitBranch, Edit3 } from 'lucide-react'
+import { ExternalLink, Trash2, Activity, GitCommit, Terminal, Zap, GitBranch, Edit3, Eye } from 'lucide-react'
 import type { WorkspaceWindow } from '@/types'
 import { useState, useEffect } from 'react'
 
@@ -13,6 +13,11 @@ export function WindowCard({ window, onDelete, viewMode = 'grid' }: WindowCardPr
   const [terminalCursor, setTerminalCursor] = useState(true)
   const [terminalOutput, setTerminalOutput] = useState<string>('')
   const [isLoadingOutput, setIsLoadingOutput] = useState(false)
+  const [prStatus, setPrStatus] = useState<{
+    loading: boolean
+    found: boolean
+    pr?: { number: number; url: string; title: string; state: string }
+  }>({ loading: true, found: false })
   
   const hasChanges = window.gitStats.hasUncommittedChanges
   const totalAdded = window.gitStats.staged + window.gitStats.unstaged
@@ -57,6 +62,44 @@ export function WindowCard({ window, onDelete, viewMode = 'grid' }: WindowCardPr
       if (hoverInterval) clearInterval(hoverInterval)
     }
   }, [window.projectName, window.featureName, viewMode, isHovered])
+
+  // Proactively check PR status when component mounts
+  useEffect(() => {
+    const checkPrStatus = async () => {
+      setPrStatus({ loading: true, found: false })
+      
+      try {
+        const response = await fetch(
+          `/api/windows/${encodeURIComponent(window.projectName)}/${encodeURIComponent(window.featureName)}/pr`,
+          { cache: 'no-cache' }
+        )
+
+        if (response.ok) {
+          const result = await response.json()
+          
+          if (result.found && result.pr) {
+            setPrStatus({
+              loading: false,
+              found: true,
+              pr: result.pr
+            })
+          } else {
+            setPrStatus({
+              loading: false,
+              found: false
+            })
+          }
+        } else {
+          setPrStatus({ loading: false, found: false })
+        }
+      } catch (error) {
+        console.warn('Failed to check PR status:', error)
+        setPrStatus({ loading: false, found: false })
+      }
+    }
+
+    checkPrStatus()
+  }, [window.projectName, window.featureName])
   
   // Fallback to mock data if no real terminal output
   const mockTerminalPreview = [
@@ -128,10 +171,35 @@ export function WindowCard({ window, onDelete, viewMode = 'grid' }: WindowCardPr
               )}
             </div>
             <button 
-              className="p-1.5 text-muted hover:text-foreground hover:bg-secondary/50 rounded text-xs transition-all duration-200"
-              title="View PR"
+              className={`p-1.5 rounded text-xs transition-all duration-200 ${
+                prStatus.loading 
+                  ? 'text-muted opacity-50 animate-pulse' 
+                  : prStatus.found 
+                    ? 'text-success bg-success/10 hover:bg-success/20 border border-success/30' 
+                    : 'text-muted opacity-40 cursor-not-allowed'
+              }`}
+              title={
+                prStatus.loading 
+                  ? 'Checking PR status...' 
+                  : prStatus.found 
+                    ? `View PR #${prStatus.pr?.number}: ${prStatus.pr?.title}`
+                    : 'No PR found'
+              }
+              disabled={prStatus.loading || !prStatus.found}
+              onClick={() => {
+                if (prStatus.loading || !prStatus.found || !prStatus.pr) return;
+                
+                console.log(`✓ Opening PR #${prStatus.pr.number}`);
+                globalThis.window.open(prStatus.pr.url, '_blank');
+              }}
             >
-              <GitCommit className="w-3 h-3" />
+              {prStatus.loading ? (
+                <GitCommit className="w-3 h-3" />
+              ) : prStatus.found ? (
+                <Eye className="w-3 h-3" />
+              ) : (
+                <GitCommit className="w-3 h-3" />
+              )}
             </button>
             <button 
               className="p-1.5 text-muted hover:text-foreground hover:bg-secondary/50 rounded text-xs transition-all duration-200"
@@ -314,18 +382,60 @@ export function WindowCard({ window, onDelete, viewMode = 'grid' }: WindowCardPr
           {/* Condensed action buttons */}
           <div className="flex gap-1">
             <button 
-              className="flex items-center justify-center gap-1 px-2 py-2 bg-transparent border border-border text-muted hover:text-foreground hover:border-accent/50 rounded text-sm transition-all duration-200"
-              title="View PR"
+              className={`flex items-center justify-center gap-1 px-2 py-2 rounded text-sm transition-all duration-200 ${
+                prStatus.loading 
+                  ? 'bg-muted/10 border border-border text-muted opacity-50 animate-pulse' 
+                  : prStatus.found 
+                    ? 'bg-success/10 border border-success/30 text-success hover:bg-success/20 hover:border-success/50' 
+                    : 'bg-muted/10 border border-border text-muted opacity-40 cursor-not-allowed'
+              }`}
+              title={
+                prStatus.loading 
+                  ? 'Checking PR status...' 
+                  : prStatus.found 
+                    ? `View PR #${prStatus.pr?.number}: ${prStatus.pr?.title}`
+                    : 'No PR found'
+              }
+              disabled={prStatus.loading || !prStatus.found}
+              onClick={() => {
+                if (prStatus.loading || !prStatus.found || !prStatus.pr) return;
+                
+                console.log(`✓ Opening PR #${prStatus.pr.number}`);
+                globalThis.window.open(prStatus.pr.url, '_blank');
+              }}
             >
-              <GitCommit className="w-4 h-4" />
-              <span className="hidden sm:inline">PR</span>
+              {prStatus.loading ? (
+                <GitCommit className="w-4 h-4" />
+              ) : prStatus.found ? (
+                <Eye className="w-4 h-4" />
+              ) : (
+                <GitCommit className="w-4 h-4" />
+              )}
+              <span className="hidden sm:inline">
+                {prStatus.loading ? 'PR' : prStatus.found ? 'View' : 'PR'}
+              </span>
             </button>
             {onDelete && (
               <button 
-                onClick={() => onDelete(window.projectName, window.featureName)}
+                onClick={() => {
+                  const confirmed = globalThis.window.confirm(
+                    `⚠️ DESTRUCTIVE ACTION\n\n` +
+                    `This will permanently:\n` +
+                    `• Kill the tmux window\n` +
+                    `• Delete the git worktree\n` +
+                    `• Remove all local changes\n\n` +
+                    `Project: ${window.projectName}\n` +
+                    `Feature: ${window.featureName}\n\n` +
+                    `Are you absolutely sure?`
+                  );
+                  
+                  if (confirmed) {
+                    onDelete(window.projectName, window.featureName);
+                  }
+                }}
                 className="flex items-center justify-center gap-1 px-2 py-2 bg-error/10 border border-error/30 text-error hover:bg-error hover:text-white hover:border-error rounded text-sm transition-all duration-200"
                 data-testid="cleanup-button"
-                title="Clean Up Window"
+                title="⚠️ Permanently delete tmux window and git worktree"
               >
                 <Trash2 className="w-4 h-4" />
                 <span className="hidden sm:inline">Clean</span>
